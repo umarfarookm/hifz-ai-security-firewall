@@ -1,30 +1,45 @@
+import type { z } from "zod";
+
 /**
  * Provider-neutral interface every LLM call in HIFZ goes through.
  * Nothing in firewall-core or the policy engine may depend on a specific
  * provider's SDK — only implementations of this interface may.
  *
  * Concrete providers (Gemini, Anthropic, OpenAI, DeepSeek, Ollama) are
- * implemented in packages/agents/src/providers/ and selected by env config
- * (see @hifz/config — INVESTIGATOR_PROVIDER / DEMO_AGENT_PROVIDER).
+ * implemented in packages/agents/src/providers/ and selected by
+ * createModelGateway() (see factory.ts) based on env config
+ * (@hifz/config — INVESTIGATOR_PROVIDER / DEMO_AGENT_PROVIDER).
  */
 
+export type ModelProvider = "gemini" | "anthropic" | "openai" | "deepseek" | "ollama" | "none";
+
 export interface ModelGatewayMetadata {
-  provider: "gemini" | "anthropic" | "openai" | "deepseek" | "ollama";
+  provider: ModelProvider;
   model: string;
 }
 
-export interface StructuredOutputRequest<TSchema> {
+export interface StructuredOutputRequest<T> {
   system: string;
   prompt: string;
-  schema: TSchema;
+  schema: z.ZodType<T>;
   temperature?: number;
   timeoutMs?: number;
 }
 
-export interface StructuredOutputResult<TOutput> {
-  data: TOutput;
+export interface StructuredOutputResult<T> {
+  data: T;
   metadata: ModelGatewayMetadata;
   latencyMs: number;
+}
+
+export class InvalidStructuredOutputError extends Error {
+  constructor(
+    message: string,
+    public readonly raw: string,
+  ) {
+    super(message);
+    this.name = "InvalidStructuredOutputError";
+  }
 }
 
 export interface ModelGateway {
@@ -32,10 +47,9 @@ export interface ModelGateway {
 
   /**
    * Runs a prompt and parses the response against a schema. Implementations
-   * must reject (never silently coerce) output that fails schema validation —
-   * callers rely on that to trigger the fail-safe path in the escalation router.
+   * must throw InvalidStructuredOutputError (never silently coerce) when the
+   * response fails schema validation — callers rely on that to trigger the
+   * fail-safe path in the escalation router (docs/architecture/LLD.md §3.6).
    */
-  generateStructured<TSchema, TOutput>(
-    request: StructuredOutputRequest<TSchema>,
-  ): Promise<StructuredOutputResult<TOutput>>;
+  generateStructured<T>(request: StructuredOutputRequest<T>): Promise<StructuredOutputResult<T>>;
 }

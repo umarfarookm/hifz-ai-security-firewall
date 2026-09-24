@@ -10,7 +10,8 @@
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "dependencies": {
-    "@hifz/config": "workspace:*"
+    "@hifz/config": "workspace:*",
+    "node-html-parser": "^6.1.13"
   },
   "devDependencies": {
     "typescript": "^5.7.2"
