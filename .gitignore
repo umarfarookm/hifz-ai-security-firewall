@@ -39,3 +39,6 @@ supabase/.temp/
 # raw planning material — local reference only, not part of the shipped repo
 /ChatGPT_Project_Docs/
 /Claude_Project_Docs/
+
+# local tool state
+/.claude/
