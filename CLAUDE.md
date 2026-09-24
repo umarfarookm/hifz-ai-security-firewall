@@ -1,7 +1,7 @@
 # CLAUDE.md — HIFZ AI
 
 HIFZ AI (Agentic Security Firewall) is an agentic Prompt Injection Firewall built for the ET AI Hackathon: Agentic Edition (Accenture), Problem 2.
-Submission deadline: **11 Oct 2026, 11:59 PM IST** (internal target: 10 Oct).
+Team: Umar Farook M (lead) and J Rasool Sheerin Sidhara. Submission deadline: **11 Oct 2026, 11:59 PM IST** (internal target: 10 Oct).
 
 ## Sources of truth (in priority order)
 

@@ -147,6 +147,9 @@ See [`docs/architecture/HLD.md`](docs/architecture/HLD.md) §10 for the full tru
 
 [MIT](LICENSE) — this is an open-source hackathon submission.
 
-## Author
+## Team
 
-Umar Farook M — [GitHub](https://github.com/umarfarookm)
+HIFZ AI team:
+
+- Umar Farook M — [GitHub](https://github.com/umarfarookm)
+- J Rasool Sheerin Sidhara — [GitHub](https://github.com/sheerin92)

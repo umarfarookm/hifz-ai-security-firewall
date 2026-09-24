@@ -3,6 +3,7 @@
 | Item | Value |
 |---|---|
 | Project | HIFZ AI — Agentic Security Firewall |
+| Team | Umar Farook M — lead, J Rasool Sheerin Sidhara |
 | Hackathon | ET AI Hackathon: Agentic Edition (Accenture) — Problem 2 |
 | Status | v1.0 — baseline for implementation |
 | Companion | `LLD.md`, `requirements.md` |
@@ -310,6 +311,7 @@ See `docs/decision-log.md` for the full architecture decision records.
 | Free-tier LLM quota limits evaluation | Verdict cache; rules-only CI; LLM eval run in batches |
 | Overfitting to our own payloads | Held-out split + public datasets |
 | Rules miss paraphrased attacks | Investigator covers the escalation band; measured, not assumed |
+| Sheerin ramping up on the TypeScript stack | Owns `firewall-core` + `eval` — pure logic and tests, no React needed |
 | Scope creep | P2 items only get picked up once P0/P1 pass evaluation |
 
 **Open:** threshold values after first calibration (tuning split only); D3 go/no-go checkpoint mid-build.
