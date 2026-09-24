@@ -1,0 +1,15 @@
+# Detector definitions. See docs/architecture/LLD.md §3.3.
+# `version` is included in the LLM verdict cache key — bump it whenever a
+# detector's patterns change so cached verdicts don't go stale silently.
+version: 1
+
+detectors: []
+# Example shape for when detectors land (Week 1, task 1.8):
+# - id: OVR-001
+#   attackType: instruction_override
+#   severity: high
+#   confidence: 0.9
+#   layers: [visible, hidden, decoded]
+#   patterns:
+#     - "ignore (all|the)? ?(previous|above) instructions"
+#   notes: "Direct override phrasing"

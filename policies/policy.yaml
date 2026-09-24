@@ -1,0 +1,28 @@
+# Ordered policy rules. First match wins. See docs/architecture/LLD.md §3.7.
+# This is the starting set from the design doc — expect it to move once
+# real detectors and calibration data exist (tuning split only).
+
+rules:
+  - id: POL-001
+    when: "finalBand == 'CRITICAL'"
+    action: BLOCK
+
+  - id: POL-002
+    when: "finalBand == 'HIGH' and sourceTrust == 'untrusted'"
+    action: BLOCK
+
+  - id: POL-003
+    when: "finalBand == 'HIGH' and sourceTrust == 'semi_trusted'"
+    action: REVIEW
+
+  - id: POL-004
+    when: "llmStatus in ['unavailable', 'invalid_output'] and ruleBand >= 'MEDIUM'"
+    action: REVIEW
+
+  - id: POL-005
+    when: "finalBand == 'MEDIUM'"
+    action: SANITIZE
+
+  - id: POL-006
+    when: "otherwise"
+    action: ALLOW

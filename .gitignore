@@ -1,0 +1,41 @@
+# dependencies
+node_modules/
+.pnpm-store/
+
+# env
+.env
+.env.local
+.env.*.local
+
+# build output
+.next/
+out/
+dist/
+build/
+*.tsbuildinfo
+
+# testing / eval artefacts
+coverage/
+eval-reports/
+
+# logs
+*.log
+npm-debug.log*
+pnpm-debug.log*
+
+# editor / OS
+.DS_Store
+.idea/
+.vscode/*
+!.vscode/extensions.json
+
+# vercel
+.vercel/
+
+# supabase local
+supabase/.branches/
+supabase/.temp/
+
+# raw planning material — local reference only, not part of the shipped repo
+/ChatGPT_Project_Docs/
+/Claude_Project_Docs/

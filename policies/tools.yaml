@@ -1,0 +1,20 @@
+# Tool allowlist for the Action Guard. See docs/architecture/LLD.md §3.9.
+version: 1
+
+tools:
+  - name: read_inbox
+    riskClass: low
+    destinationAllowlist: null
+
+  - name: summarize
+    riskClass: low
+    destinationAllowlist: null
+
+  - name: send_email
+    riskClass: high
+    destinationAllowlist:
+      - "*@hifz-demo.test"
+
+  - name: read_secrets
+    riskClass: critical
+    destinationAllowlist: null
