@@ -1,8 +1,8 @@
-# HIFZ — High-Level Design
+# HIFZ AI — High-Level Design
 
 | Item | Value |
 |---|---|
-| Project | HIFZ — Agentic AI Security Firewall |
+| Project | HIFZ AI — Agentic Security Firewall |
 | Hackathon | ET AI Hackathon: Agentic Edition (Accenture) — Problem 2 |
 | Status | v1.0 — baseline for implementation |
 | Companion | `LLD.md`, `requirements.md` |

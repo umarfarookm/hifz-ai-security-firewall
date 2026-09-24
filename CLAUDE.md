@@ -1,6 +1,6 @@
-# CLAUDE.md — HIFZ
+# CLAUDE.md — HIFZ AI
 
-HIFZ is an agentic Prompt Injection Firewall built for the ET AI Hackathon: Agentic Edition (Accenture), Problem 2.
+HIFZ AI (Agentic Security Firewall) is an agentic Prompt Injection Firewall built for the ET AI Hackathon: Agentic Edition (Accenture), Problem 2.
 Submission deadline: **11 Oct 2026, 11:59 PM IST** (internal target: 10 Oct).
 
 ## Sources of truth (in priority order)

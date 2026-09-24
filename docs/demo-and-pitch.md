@@ -1,4 +1,4 @@
-# HIFZ — Demo and Pitch Plan
+# HIFZ AI — Demo and Pitch Plan
 
 ## Core story
 

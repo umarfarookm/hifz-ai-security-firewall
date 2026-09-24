@@ -1,4 +1,4 @@
-# HIFZ — Build Plan (23 Sep → 11 Oct 2026)
+# HIFZ AI — Build Plan (23 Sep → 11 Oct 2026)
 
 Target submission: **10 Oct 2026** (one buffer day before the 11 Oct, 11:59 PM IST deadline).
 Rule: P2 work never starts while any P0/P1 item is open. Tick an item only when its acceptance criterion is met, not when the code merely exists.

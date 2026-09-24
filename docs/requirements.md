@@ -1,4 +1,4 @@
-# HIFZ — Requirements
+# HIFZ AI — Requirements
 
 This file translates `docs/official-requirements.md` into functional and non-functional requirements we can actually build and test against. If this file and the official one disagree, the official one wins.
 

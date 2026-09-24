@@ -1,4 +1,4 @@
-# HIFZ — Decision Log
+# HIFZ AI — Decision Log
 
 Architecture decision records. Each one states what we chose, what we rejected, and why — so a reviewer (or a future us) doesn't have to reverse-engineer the reasoning from code.
 

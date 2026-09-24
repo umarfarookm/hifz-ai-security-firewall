@@ -1,8 +1,8 @@
-# HIFZ
+# HIFZ AI — Agentic Security Firewall
 
-**An agentic firewall that stops prompt injection before it reaches an AI agent.**
+An AI-powered security layer that detects and neutralizes prompt injection attacks before they can influence AI agents.
 
-HIFZ is a prototype built for the ET AI Hackathon: Agentic Edition (Accenture), Problem 2 — *Agentic Cybersecurity: Prompt Injection Firewall*. It inspects untrusted content (emails, web pages, API responses, documents, source code) before that content can influence an AI agent's behaviour, and it intercepts every tool call the agent proposes as a second line of defence.
+HIFZ AI is a prototype built for the ET AI Hackathon: Agentic Edition (Accenture), Problem 2 — *Agentic Cybersecurity: Prompt Injection Firewall*. It inspects untrusted content (emails, web pages, API responses, documents, source code) before that content can influence an AI agent's behaviour, and it intercepts every tool call the agent proposes as a second line of defence.
 
 > Status: early build. The architecture, domain model, and risk-scoring logic below are implemented and tested; the full detection pipeline, agents, and UI are in progress. See [`docs/PLAN.md`](docs/PLAN.md) for exactly what's done vs. planned.
 

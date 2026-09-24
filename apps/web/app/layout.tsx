@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import type { ReactNode } from "react";
 
 export const metadata: Metadata = {
-  title: "HIFZ — Agentic AI Security Firewall",
+  title: "HIFZ AI — Agentic Security Firewall",
   description: "A firewall that inspects untrusted content before it can influence an AI agent.",
 };
 

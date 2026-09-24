@@ -1,4 +1,4 @@
-# HIFZ — Low-Level Design
+# HIFZ AI — Low-Level Design
 
 | Item | Value |
 |---|---|
