@@ -10,7 +10,7 @@ Rule: P2 work never starts while any P0/P1 item is open. Tick an item only when 
 | # | Task | Acceptance criterion |
 |---|---|---|
 | 1.1 | Monorepo scaffold (pnpm workspaces, TS strict, lint import rules, Vitest) | `pnpm build && pnpm test` pass; an import-rule violation fails lint |
-| 1.2 | GitHub repo under personal account; CI runs lint + typecheck + test | Green CI on `main` |
+| 1.2 | GitHub repo under personal account; CI workflow (lint + typecheck + test), triggered manually to conserve Actions minutes | A manual run on `main` is green |
 | 1.3 | Hello-world Next.js deployed to Vercel Hobby | Public URL loads; repo connected |
 | 1.4 | Supabase dev + demo projects; migrations for all tables in `LLD.md` §5; RLS on | Migrations apply cleanly to both projects from the repo |
 | 1.5 | Env validation + provider factory; smoke test each provider actually used | One structured-output call succeeds per configured provider |

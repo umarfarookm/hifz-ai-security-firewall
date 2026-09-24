@@ -394,7 +394,7 @@ sequenceDiagram
 - Precision / recall computed on BLOCK+REVIEW vs. ALLOW.
 - Latency p50 / p95 per mode.
 
-**CI:** on every push, rules-only mode runs on the held-out split; the build fails if the false-positive rate or detection rate regresses beyond a set tolerance.
+**CI:** run manually (`workflow_dispatch`) to avoid burning Actions minutes on every commit; rules-only mode runs on the held-out split, and the build fails if the false-positive rate or detection rate regresses beyond a set tolerance.
 
 ---
 

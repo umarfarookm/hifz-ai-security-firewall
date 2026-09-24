@@ -243,7 +243,7 @@ Deterministic interception of every proposed tool call (see `LLD.md` §3.9). Out
 - **Split:** tuning set (used to calibrate thresholds) vs. held-out test set (never tuned on). Only held-out results are reported.
 - **Modes:** rules-only vs. rules + LLM — shows the measured value the AI layer actually adds.
 - **Metrics:** per-category detection rate, precision, recall, false-positive rate on legitimate content, latency (p50/p95).
-- **Automation:** `pnpm eval` locally; GitHub Actions on push (rules-only in CI; LLM mode run on demand to protect quota).
+- **Automation:** `pnpm eval` locally; GitHub Actions runs lint/typecheck/test/eval on manual trigger (rules-only; LLM mode run on demand to protect both quota and Actions minutes).
 
 ---
 
