@@ -87,10 +87,12 @@ hifz-ai-security-firewall/
    ```
    At minimum you need a Supabase URL + keys, and one LLM provider configured. Every variable is documented inline in `.env.example`. The app validates this file at startup and refuses to boot if it's invalid — you'll get a clear error telling you what's missing.
 
-3. Apply the database schema (once Supabase migrations exist — see `supabase/migrations/`):
+3. Apply the database schema to your own Supabase project (see `supabase/migrations/`):
    ```bash
-   pnpm supabase db push
+   supabase link --project-ref <your-project-ref>
+   supabase db push
    ```
+   Or run `supabase start` to spin up a full local Postgres + Studio in Docker instead of using a cloud project — migrations apply automatically on start.
 
 4. Run the app:
    ```bash
@@ -107,6 +109,25 @@ pnpm test         # run all unit tests
 pnpm lint         # lint, including import-boundary rules
 pnpm typecheck    # type-check every package
 pnpm eval --mode rules_only --split tuning   # run the evaluation suite
+```
+
+## Deployment
+
+The app is deployed on [Vercel](https://vercel.com), which fits the free-tier hosting constraint in `docs/architecture/HLD.md` §13. The project is a monorepo, so Vercel's **Root Directory** is set to `apps/web` — Vercel still detects the pnpm workspace at the repo root and installs from there automatically.
+
+**Live URL:** https://hifz-ai-security-firewall.vercel.app
+
+**Automatic deploys:** the Vercel project is connected to this GitHub repo. Every push to `main` builds and deploys to production automatically — there's no manual step for routine changes.
+
+**Manual deploy** (e.g. to test a build before pushing):
+```bash
+npx vercel@latest login    # first time only, opens a browser
+pnpm deploy                # builds and deploys to production
+```
+
+**Environment variables** live in the Vercel dashboard (Project → Settings → Environment Variables) for the `production` environment, not in this repo. They mirror `.env.example`, pointed at the **demo** Supabase project rather than dev (see `docs/architecture/HLD.md` §13 for the dev/demo split). If you need to add or change one:
+```bash
+npx vercel@latest env add <NAME> production --value "<value>" --yes
 ```
 
 ## Evaluation
