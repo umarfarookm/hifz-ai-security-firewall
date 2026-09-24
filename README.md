@@ -23,6 +23,8 @@ Input → Ingest → Normalize → Detect → Score → Investigate (LLM, only w
 - **Defence in depth.** Even if malicious content slips through, every tool call the protected agent proposes is checked again by a deterministic Action Guard — allowlists, parameter validation, an outbound secret scan, and a taint check tied back to where the triggering content came from.
 - **Fail safe, not fail open.** If the model is slow, out of quota, or returns something invalid, the system degrades to a human review queue — never to silent approval.
 
+There's no separate backend service — the UI and the pipeline logic above both live in one Next.js app, and each API route runs as its own Vercel serverless function. See [`docs/architecture/HLD.md`](docs/architecture/HLD.md) §5.1 for the request-flow diagram and why that's the right shape for this project, not a shortcut.
+
 The full design — data model, risk-scoring formula, database schema, API contracts, sequence diagrams — lives in [`docs/architecture/HLD.md`](docs/architecture/HLD.md) and [`docs/architecture/LLD.md`](docs/architecture/LLD.md).
 
 ## What it detects

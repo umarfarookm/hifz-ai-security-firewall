@@ -120,6 +120,43 @@ flowchart TB
 
 **Dependency rule [DECISION]:** `firewall-core` depends on nothing else in the repo and makes no network calls. `agents` depends on `core`. `web` and `eval` depend on `agents`. This is enforced by lint, not just convention — see `eslint.config.js`.
 
+### 5.1 Why one deployable app, not separate frontend/backend services [DECISION — ADR-10]
+
+There is exactly **one deployable artifact**: `apps/web`, a Next.js app. It is not a frontend that calls out to a separately hosted backend. Next.js's App Router lets one app contain both UI pages (`app/**/page.tsx`) and server-side API route handlers (`app/api/**/route.ts`) side by side. On Vercel, each API route becomes its own serverless function. Deploying "the web app" *is* deploying the backend — they are the same build.
+
+`packages/agents` and `packages/firewall-core` are **plain libraries with no server of their own** — they only run when an API route imports and calls them, inside that route's serverless function, for the lifetime of a single request. There is no standing "agent process," no queue, no worker pool.
+
+**Request flow, once the pipeline is wired up (task 2.9):**
+
+```text
+Browser
+  │  POST /api/v1/inspect
+  ▼
+Vercel serverless function (apps/web/app/api/v1/inspect/route.ts)
+  │
+  ├─▶ @hifz/firewall-core   ingest → normalize → detect → score      (in-process, no network)
+  ├─▶ @hifz/agents          investigator LLM call, if escalation band (HTTPS out, per §6.1)
+  ├─▶ @hifz/agents          Action Guard checks                       (in-process)
+  └─▶ Supabase client (service-role key)  write inspection/signals/decision (HTTPS out)
+  │
+  ▼
+JSON response back to the browser
+```
+
+Everything above happens inside one function invocation. Nothing is left running in the background after the response is sent.
+
+**Why [DECISION]:**
+
+| Reason | Detail |
+|---|---|
+| Matches the non-goals in §1.2 | No Kubernetes, no Kafka, no Redis, no dedicated agent server to provision, patch, or pay for. |
+| Fits the free-tier hosting constraint | Vercel Hobby only hosts serverless/edge functions, not long-running processes — a persistent agent server wouldn't fit this deployment target at all (§13). |
+| Forces principle P6 (§3) | Keeping `firewall-core` and `agents` as plain libraries with no server means they're portable, unit-testable in CI, and reusable from `packages/eval`'s CLI runner without spinning up HTTP infrastructure. |
+| Consistent with P4 (fail-safe) and reliability model (§11) | Serverless functions keep no memory between requests, so anything that must persist — session risk, the LLM verdict cache, rate-limit counters — already has to live in Supabase, not in-process. A separate backend server wouldn't remove that requirement; it would just add a second place state could go missing. |
+| One deploy target, one thing to keep warm | Simpler operationally for a two-person team on a hackathon timeline: one Vercel project, one set of env vars, one build to debug. |
+
+**Rejected alternative:** a separately hosted agent/API service (e.g. a small Node server on Render/Fly, called by the Next.js app). Rejected because it would need its own always-on hosting (conflicts with the $0 constraint and the "no unnecessary microservices" principle in CLAUDE.md), introduces a second deployment pipeline and a second place secrets can leak, and buys nothing the serverless model doesn't already provide for this project's traffic shape (low-volume hackathon demo, not a high-throughput production workload).
+
 ---
 
 ## 6. Runtime pipeline
