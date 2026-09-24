@@ -82,6 +82,41 @@
 | P6 | **The firewall core is framework-independent.** | Testable, evaluable in CI, portable beyond Next.js. |
 | P7 | **Every number shown in the UI comes from a real run.** | Credibility with technical judges. |
 
+### 3.1 Technology stack rationale [DECISION — ADR-2, ADR-6, ADR-11]
+
+The most common question this stack gets: *why not Angular + Spring Boot, a dedicated database, and AWS?* Short answer — none of those are wrong choices in general, they're just optimized for a different situation (a larger team, a longer timeline, or an existing ops budget) than a two-person team shipping a working, reliable prototype in about 18 days at $0. Each row below is a real tradeoff we made deliberately, not a default.
+
+**Frontend + backend framework**
+
+| | Our choice: TypeScript + Next.js | Alternative: Angular + Spring Boot |
+|---|---|---|
+| Languages to get right | One (TypeScript), shared types across UI, API, and the firewall packages | Two (TypeScript + Java), with DTOs hand-duplicated and kept in sync between them |
+| Deploy shape | UI and API routes are one build, one deploy (§5.1) | Two separate services, two build pipelines, two things that can fall out of sync before a demo |
+| Cold start / footprint | Serverless functions start in milliseconds | A JVM process is heavy to start; keeping it warm on a free tier means an always-on instance, which costs money we don't have |
+| Team fit | React/Next.js was the lower ramp-up cost for the team member newer to the stack (see the risk note in `docs/architecture/HLD.md` §18) | Angular's module/DI/RxJS model is more ceremony to learn under time pressure |
+| LLM tooling maturity | The JS/TS ecosystem has first-class SDKs for every provider we support (Gemini, Anthropic, OpenAI, DeepSeek, Ollama) | Java LLM tooling exists but is less mature and less documented — more time spent on plumbing, less on the actual detection logic that's being judged |
+
+**Database**
+
+| | Our choice: Supabase Postgres | Alternative: a self-managed/dedicated Postgres (e.g. AWS RDS, or Postgres on a VM) |
+|---|---|---|
+| What you get out of the box | Managed Postgres + an auto-generated REST API (PostgREST) + Auth (used directly for reviewer login, ADR-9) + a Studio UI for inspecting data live during the demo | Just a database — auth, an API layer, and an admin UI are all separate things we'd have to build or bolt on |
+| Serverless connection handling | Built for exactly this pattern (many short-lived serverless invocations) via PostgREST/pooling | A traditional Postgres connection limit is easy to exhaust from serverless functions opening/closing connections rapidly — needs its own pooler (e.g. RDS Proxy) to do safely |
+| Setup time | One CLI command per project, working in under a minute (§1.4) | VPC, security groups, subnet routing, and a pooler to expose it safely to a serverless frontend |
+| Cost durability | Free tier with known, documented limits we've already planned around (500 MB storage, pauses after a week idle — mitigated by the keep-alive job in §13) | RDS's free tier is time-limited (12 months on a new AWS account), then billed — a cost risk for a project with no budget |
+| Underlying tech | It's still just Postgres — no proprietary lock-in beyond Auth/RLS, which are themselves just Postgres extensions and a thin auth service | — |
+
+**Hosting / deployment**
+
+| | Our choice: Vercel | Alternative: AWS (EC2 / ECS / Lambda + API Gateway) |
+|---|---|---|
+| Setup to get to "deployed" | `git push` → built, HTTPS, CDN, preview URL per commit, done (§1.3, §5.1) | IAM roles, VPC, API Gateway/ECS task definitions, CloudFront, ACM certs, Route 53 — real infrastructure work before the first request is served |
+| Time tradeoff | Near-zero infra time, more time on detectors/agents/eval — the things actually being judged | Infra setup time for a 2-person, ~18-day build directly competes with build time for the parts of the solution graders score |
+| Cost risk during a hackathon | Hobby tier is free with clear, fixed limits | Easy to accidentally leave something billable running (an idle EC2 instance, a NAT gateway) — a real risk for a team without day-to-day AWS cost-management habits |
+| Fit for the framework | Vercel is built by the Next.js team specifically for this framework — zero-config serverless functions per API route | Would need to hand-wire the same serverless-per-route behaviour ourselves |
+
+**This isn't a one-way door.** `firewall-core` has zero framework dependency (P6) and the database is plain Postgres with versioned migrations, not a Supabase-proprietary schema — so moving to a Spring Boot service and a self-managed Postgres instance on AWS later, if this ever became a real product with a larger team and ops budget, would be a contained migration of the API and hosting layer, not a rewrite of the security logic itself.
+
 ---
 
 ## 4. System context
@@ -128,22 +163,41 @@ There is exactly **one deployable artifact**: `apps/web`, a Next.js app. It is n
 
 **Request flow, once the pipeline is wired up (task 2.9):**
 
-```text
-Browser
-  │  POST /api/v1/inspect
-  ▼
-Vercel serverless function (apps/web/app/api/v1/inspect/route.ts)
-  │
-  ├─▶ @hifz/firewall-core   ingest → normalize → detect → score      (in-process, no network)
-  ├─▶ @hifz/agents          investigator LLM call, if escalation band (HTTPS out, per §6.1)
-  ├─▶ @hifz/agents          Action Guard checks                       (in-process)
-  └─▶ Supabase client (service-role key)  write inspection/signals/decision (HTTPS out)
-  │
-  ▼
-JSON response back to the browser
+```mermaid
+sequenceDiagram
+  actor U as Browser
+  participant F as Vercel function<br/>apps/web/app/api/v1/inspect
+  participant C as @hifz/firewall-core
+  participant A as @hifz/agents
+  participant L as LLM provider
+  participant DB as Supabase
+
+  U->>F: POST /api/v1/inspect
+
+  Note over F,C: in-process call, no network
+  F->>C: ingest → normalize → detect → score
+  C-->>F: RiskAssessment (score, band, signals)
+
+  opt score lands in the escalation band (§6.1)
+    Note over F,L: HTTPS out to the LLM provider
+    F->>A: investigate(content, signals)
+    A->>L: generateStructured(...)
+    L-->>A: verdict (JSON)
+    A-->>F: InvestigatorVerdict
+  end
+
+  Note over F,A: in-process call, no network
+  F->>A: Action Guard checks(proposed tool call)
+  A-->>F: GuardDecision
+
+  Note over F,DB: HTTPS out to Supabase
+  F->>DB: write inspection + signals + decision
+  DB-->>F: ok
+
+  F-->>U: JSON response
 ```
 
-Everything above happens inside one function invocation. Nothing is left running in the background after the response is sent.
+Everything above happens inside one function invocation — it starts when the request comes in and ends when the response is sent. Nothing is left running in the background afterward; the two network hops out (LLM provider, Supabase) are the only times this function talks to anything outside itself.
 
 **Why [DECISION]:**
 

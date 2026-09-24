@@ -115,7 +115,7 @@ pnpm eval --mode rules_only --split tuning   # run the evaluation suite
 
 ## Deployment
 
-The app is deployed on [Vercel](https://vercel.com), which fits the free-tier hosting constraint in `docs/architecture/HLD.md` §13. The project is a monorepo, so Vercel's **Root Directory** is set to `apps/web` — Vercel still detects the pnpm workspace at the repo root and installs from there automatically.
+The app is deployed on [Vercel](https://vercel.com), which fits the free-tier hosting constraint in `docs/architecture/HLD.md` §13. The project is a monorepo, so Vercel's **Root Directory** is set to `apps/web` — Vercel still detects the pnpm workspace at the repo root and installs from there automatically. (Why Vercel and not AWS, why Next.js and not Angular/Spring Boot, why Supabase and not a self-managed database — see `docs/architecture/HLD.md` §3.1 for the full comparison.)
 
 **Live URL:** https://hifz-ai-security-firewall.vercel.app
 
