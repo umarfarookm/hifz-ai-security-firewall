@@ -65,3 +65,4 @@ Summarised from the ET AI Hackathon: Agentic Edition problem statement PDF and t
 
 - Plagiarism results in disqualification. Attribute every public dataset and third-party snippet used.
 - Open-source tools and AI models are allowed.
+- **[VERIFIED]** No specific technology, programming language, framework, cloud provider, or database is mandated anywhere in the 14-page problem statement PDF (checked in full on 2026-09-24, not just this summary). Technology choice is entirely up to the team — our stack (`docs/architecture/HLD.md` §3.1) is an engineering decision, not a compliance requirement.

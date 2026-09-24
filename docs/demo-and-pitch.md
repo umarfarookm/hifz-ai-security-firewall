@@ -44,6 +44,20 @@ State explicitly, with evidence for each line:
 
 Never claim D3 unless a later multimodal evaluation actually supports it — overestimating the grid position is penalized as heavily as underestimating it.
 
+## Likely Q&A — quick answers
+
+**"Why not Angular/Spring Boot, a dedicated database, or AWS?"**
+
+> Two-person team, ~18 days, $0 budget — every AWS/Angular/Spring Boot/dedicated-DB alternative trades infra-setup time and ops overhead for things the judging criteria don't score, and none of those choices are locked in if this became a real product later.
+
+Full comparison tables and reasoning: `docs/architecture/HLD.md` §3.1. (Note: the hackathon doesn't mandate any tech stack — verified against the full problem statement PDF, `docs/official-requirements.md` — so this is purely an engineering justification, not a compliance answer.)
+
+**"Why one Next.js app instead of a separate frontend and backend?"**
+
+> There's no backend to separate out — API routes and UI pages are both part of the same Next.js app, and each API route runs as its own serverless function. No standing agent server, no queue, nothing left running after a request finishes.
+
+Diagram and reasoning: `docs/architecture/HLD.md` §5.1.
+
 ## One rule that overrides everything else here
 
 The deck and the demo must never claim functionality that doesn't exist in the repository. If a slide says it, the repo has to prove it.
