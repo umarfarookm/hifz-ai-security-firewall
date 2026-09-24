@@ -165,7 +165,7 @@ There is exactly **one deployable artifact**: `apps/web`, a Next.js app. It is n
 
 ```mermaid
 sequenceDiagram
-  actor U as Browser
+  participant U as Browser
   participant F as Vercel function<br/>apps/web/app/api/v1/inspect
   participant C as @hifz/firewall-core
   participant A as @hifz/agents

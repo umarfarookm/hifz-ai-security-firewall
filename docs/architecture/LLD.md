@@ -319,7 +319,7 @@ Every transition is an audit event with reviewer id and comment.
 
 ```mermaid
 sequenceDiagram
-  actor U as User
+  participant U as User
   participant A as Protected agent
   participant G as Action Guard
   participant F as Firewall (core)
@@ -329,7 +329,7 @@ sequenceDiagram
   A->>G: read_inbox()
   G-->>A: EXECUTE → emails
   A->>F: inspect(each email, source=email, untrusted)
-  F->>F: html adapter extracts hidden text; detectors fire (IND, CRD)
+  F->>F: html adapter extracts hidden text, detectors fire (IND/CRD)
   F->>I: score 55 (escalation band)
   I-->>F: verdict HIGH (credential theft)
   F->>DB: inspection + signals + verdict
