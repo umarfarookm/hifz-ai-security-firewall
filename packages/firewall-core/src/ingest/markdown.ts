@@ -17,34 +17,41 @@ const LINK_WITH_TITLE = /\[([^\]]+)\]\(([^)"']+)(?:[ \t]+["']([^"']*)["'])?\)/g;
  */
 export const ingestMarkdown: IngestAdapter = (raw) => {
   const hiddenSegments: Span[] = [];
-  let cursor = 0;
   let working = raw;
 
+  // Each pass gets its own cursor, not a shared one — the four passes run
+  // in pattern order, not document order, so a cursor advanced by an
+  // earlier pass can land after a match a later pass needs to find.
+  let commentCursor = 0;
+  let referenceCursor = 0;
+  let imageCursor = 0;
+  let linkCursor = 0;
+
   working = working.replace(HTML_COMMENT, (match, inner: string) => {
-    const { span, nextIndex } = locateSpan(raw, match, "hidden", cursor);
-    cursor = nextIndex;
+    const { span, nextIndex } = locateSpan(raw, match, "hidden", commentCursor);
+    commentCursor = nextIndex;
     if (inner.trim().length > 0) hiddenSegments.push({ ...span, excerpt: truncate(inner.trim()) });
     return "";
   });
 
   working = working.replace(REFERENCE_DEFINITION, (match, _label: string, _url: string, title?: string) => {
-    const { span, nextIndex } = locateSpan(raw, match, "hidden", cursor);
-    cursor = nextIndex;
+    const { span, nextIndex } = locateSpan(raw, match, "hidden", referenceCursor);
+    referenceCursor = nextIndex;
     hiddenSegments.push({ ...span, excerpt: truncate(title ?? match.trim()) });
     return "";
   });
 
   working = working.replace(IMAGE, (match, alt: string) => {
-    const { span, nextIndex } = locateSpan(raw, match, "hidden", cursor);
-    cursor = nextIndex;
+    const { span, nextIndex } = locateSpan(raw, match, "hidden", imageCursor);
+    imageCursor = nextIndex;
     if (alt.trim().length > 0) hiddenSegments.push({ ...span, excerpt: truncate(alt.trim()) });
     return "";
   });
 
   working = working.replace(LINK_WITH_TITLE, (match, text: string, _url: string, title?: string) => {
     if (title && title.trim().length > 0) {
-      const { span, nextIndex } = locateSpan(raw, match, "hidden", cursor);
-      cursor = nextIndex;
+      const { span, nextIndex } = locateSpan(raw, match, "hidden", linkCursor);
+      linkCursor = nextIndex;
       hiddenSegments.push({ ...span, excerpt: truncate(title.trim()) });
     }
     return text;
