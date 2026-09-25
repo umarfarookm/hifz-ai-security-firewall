@@ -1,4 +1,5 @@
 import type { z } from "zod";
+import type { ToolConversationMessage, ToolDefinition, ToolTurnResult } from "./tool-types.js";
 
 /**
  * Provider-neutral interface every LLM call in HIFZ goes through.
@@ -42,6 +43,16 @@ export class InvalidStructuredOutputError extends Error {
   }
 }
 
+export interface ToolTurnRequest {
+  system: string;
+  prompt: string;
+  tools: ToolDefinition[];
+  /** Prior tool calls and their results, oldest first. Empty on the first turn. */
+  history: ToolConversationMessage[];
+  temperature?: number;
+  timeoutMs?: number;
+}
+
 export interface ModelGateway {
   readonly metadata: ModelGatewayMetadata;
 
@@ -52,4 +63,14 @@ export interface ModelGateway {
    * fail-safe path in the escalation router (docs/architecture/LLD.md §3.6).
    */
   generateStructured<T>(request: StructuredOutputRequest<T>): Promise<StructuredOutputResult<T>>;
+
+  /**
+   * Runs one turn of a tool-calling conversation: the model either asks to
+   * invoke one or more tools, or replies without calling one (treated as
+   * invalid by callers, since every tool set here always includes a
+   * "submit" tool the model is expected to call instead of replying in
+   * plain text). Used by the investigator agent's bounded tool loop
+   * (docs/architecture/LLD.md §3.6).
+   */
+  runToolTurn(request: ToolTurnRequest): Promise<ToolTurnResult>;
 }

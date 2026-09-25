@@ -1,3 +1,13 @@
+import { config as loadDotenv } from "dotenv";
+
+// Next.js only auto-loads .env.local from this app's own directory
+// (apps/web/), but the repo's one true .env.local lives at the monorepo
+// root — same convention as the CLI scripts in packages/agents. Load it
+// explicitly so API routes that call @hifz/config's loadEnv() see it.
+// dotenv never overrides a var that's already set, so this is a no-op in
+// deployed environments where Vercel injects real env vars directly.
+loadDotenv({ path: "../../.env.local" });
+
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: true,

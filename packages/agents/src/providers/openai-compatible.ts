@@ -1,7 +1,30 @@
 import OpenAI from "openai";
-import type { ModelGateway, ModelGatewayMetadata, StructuredOutputRequest, StructuredOutputResult } from "../model-gateway.js";
+import type {
+  ModelGateway,
+  ModelGatewayMetadata,
+  StructuredOutputRequest,
+  StructuredOutputResult,
+  ToolTurnRequest,
+} from "../model-gateway.js";
 import { InvalidStructuredOutputError } from "../model-gateway.js";
+import type { JSONSchemaProperty, ToolDefinition, ToolTurnResult } from "../tool-types.js";
 import { parseStructuredOutput } from "./parse-structured-output.js";
+
+function toOpenAiSchema(schema: JSONSchemaProperty): Record<string, unknown> {
+  // OpenAI accepts plain JSON Schema — our shape is already a subset of it.
+  return schema as unknown as Record<string, unknown>;
+}
+
+function toOpenAiTools(tools: ToolDefinition[]): OpenAI.Chat.ChatCompletionTool[] {
+  return tools.map((tool) => ({
+    type: "function",
+    function: {
+      name: tool.name,
+      description: tool.description,
+      parameters: toOpenAiSchema(tool.parameters),
+    },
+  }));
+}
 
 export interface OpenAiCompatibleConfig {
   provider: "openai" | "deepseek" | "ollama";
@@ -47,6 +70,52 @@ export class OpenAiCompatibleGateway implements ModelGateway {
 
     const data = parseStructuredOutput(text, request.schema);
     return { data, metadata: this.metadata, latencyMs: Date.now() - start };
+  }
+
+  async runToolTurn(request: ToolTurnRequest): Promise<ToolTurnResult> {
+    const messages: OpenAI.Chat.ChatCompletionMessageParam[] = [
+      { role: "system", content: request.system },
+      { role: "user", content: request.prompt },
+    ];
+
+    for (const turn of request.history) {
+      if (turn.role === "assistant") {
+        messages.push({
+          role: "assistant",
+          content: null,
+          tool_calls: turn.toolCalls.map((call) => ({
+            id: call.id,
+            type: "function",
+            function: { name: call.name, arguments: call.argsJson },
+          })),
+        });
+      } else {
+        messages.push({ role: "tool", tool_call_id: turn.toolCallId, content: turn.resultJson });
+      }
+    }
+
+    const response = await this.client.chat.completions.create(
+      {
+        model: this.metadata.model,
+        temperature: request.temperature ?? 0,
+        tools: toOpenAiTools(request.tools),
+        tool_choice: "required",
+        messages,
+      },
+      request.timeoutMs === undefined ? undefined : { timeout: request.timeoutMs },
+    );
+
+    const message = response.choices[0]?.message;
+    const toolCalls = message?.tool_calls?.filter((c): c is OpenAI.Chat.ChatCompletionMessageToolCall & { type: "function" } => c.type === "function");
+
+    if (toolCalls && toolCalls.length > 0) {
+      return {
+        kind: "tool_calls",
+        calls: toolCalls.map((call) => ({ id: call.id, name: call.function.name, argsJson: call.function.arguments })),
+      };
+    }
+
+    return { kind: "no_tool_call", text: message?.content ?? "" };
   }
 }
 

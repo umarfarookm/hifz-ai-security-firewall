@@ -57,6 +57,9 @@ importers:
       '@types/react-dom':
         specifier: ^18.3.1
         version: 18.3.7(@types/react@18.3.31)
+      dotenv:
+        specifier: ^16.4.5
+        version: 16.6.1
       typescript:
         specifier: ^5.7.2
         version: 5.9.3

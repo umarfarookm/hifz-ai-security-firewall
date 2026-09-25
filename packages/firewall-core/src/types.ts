@@ -108,3 +108,13 @@ export interface Decision {
   finalBand: RiskBand;
   llmStatus: LlmStatus;
 }
+
+export interface InvestigatorVerdict {
+  isInjection: boolean;
+  attackTypes: AttackType[];
+  band: RiskBand;
+  rationale: string; // ≤ 500 chars, shown in the evidence view
+  evidence: Span[]; // Offsets must exist in the input the investigator was given
+  stepsTaken: string[]; // Plan trace for the UI
+  modelTag: string; // "provider:model"
+}

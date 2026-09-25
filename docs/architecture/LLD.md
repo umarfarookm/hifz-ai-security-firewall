@@ -214,7 +214,7 @@ Policies are ordered rules in `policies/policy.yaml`; first match wins; the rule
 | POL-001 | finalBand = CRITICAL | BLOCK |
 | POL-002 | finalBand = HIGH and source trust = untrusted | BLOCK |
 | POL-003 | finalBand = HIGH and source trust = semi_trusted | REVIEW |
-| POL-004 | llmStatus ∈ {unavailable, invalid_output} and ruleBand ≥ MEDIUM | REVIEW |
+| POL-004 | llmStatus ∈ {not_called, unavailable, invalid_output} for a case the escalation router sent for investigation, and ruleBand ≥ MEDIUM | REVIEW (or BLOCK if `LLM_FAILURE_MODE=block`) |
 | POL-005 | finalBand = MEDIUM | SANITIZE |
 | POL-006 | otherwise | ALLOW |
 
