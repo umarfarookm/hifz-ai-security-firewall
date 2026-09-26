@@ -360,17 +360,17 @@ Deterministic interception of every proposed tool call (see `LLD.md` §3.9). Out
 
 ---
 
-## 15. Non-functional targets [ASSUMPTION — to be measured early in the build]
+## 15. Non-functional targets
 
-| Metric | Target |
-|---|---|
-| Deterministic path latency | p95 < 150 ms (server-side, excluding network) |
-| LLM path latency | p95 < 8 s on a free-tier model |
-| False-positive rate (held-out legitimate set) | < 5% |
-| Detection rate per committed category (held-out) | ≥ 85% |
-| Max input size | 100 KB per inspection |
+| Metric | Target | Status |
+|---|---|---|
+| Deterministic path latency | p95 < 150 ms (server-side, excluding network) | **[VERIFIED]** p95 = 0.063 ms — see `docs/measurements.md` |
+| LLM path latency | p95 < 8 s on a free-tier model | **[VERIFIED]** p95 = 4,626 ms (Gemini free tier) — see `docs/measurements.md` |
+| False-positive rate (held-out legitimate set) | < 5% | [ASSUMPTION] — needs the eval runner (task 2.4) and a held-out run to measure |
+| Detection rate per committed category (held-out) | ≥ 85% | [ASSUMPTION] — same, needs task 2.4 |
+| Max input size | 100 KB per inspection | [DECISION] — not yet enforced in code |
 
-If measured values miss these targets, the deck reports the real numbers — the claim is never adjusted silently to match a target.
+If measured values miss these targets, the deck reports the real numbers — the claim is never adjusted silently to match a target. Both latency targets passed with real margin (§ `docs/measurements.md`); no target needed adjusting.
 
 ---
 
