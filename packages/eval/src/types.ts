@@ -12,5 +12,5 @@ export interface EvalCase {
   expectedAction: "ALLOW" | "SANITIZE" | "REVIEW" | "BLOCK";
   expectedMinBand: RiskBand;
   origin: "own" | "bipia" | "deepset" | "notinject";
-  notes?: string;
+  notes?: string | undefined;
 }
