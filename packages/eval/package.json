@@ -8,12 +8,14 @@
   "scripts": {
     "build": "tsc -p tsconfig.json",
     "typecheck": "tsc -p tsconfig.json --noEmit",
-    "start": "tsx src/cli.ts"
+    "start": "tsx src/cli.ts",
+    "generate-split": "tsx src/generate-split.ts"
   },
   "dependencies": {
     "@hifz/agents": "workspace:*",
     "@hifz/config": "workspace:*",
-    "@hifz/firewall-core": "workspace:*"
+    "@hifz/firewall-core": "workspace:*",
+    "zod": "^3.23.8"
   },
   "devDependencies": {
     "@types/node": "^22.9.0",
