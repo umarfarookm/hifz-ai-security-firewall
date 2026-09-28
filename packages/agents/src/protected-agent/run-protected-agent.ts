@@ -20,8 +20,16 @@ export interface ToolCallLogEntry {
   args: Record<string, unknown>;
   guardOutcome: "EXECUTE" | "BLOCK" | "REQUIRE_APPROVAL";
   guardReason: string;
-  /** Per-check G1-G6 breakdown from the Action Guard — for the audit log and the Event detail screen. */
+  /** Per-check G1-G6 breakdown from the Action Guard — for the audit log and the Agent demo screen. */
   checks: GuardCheckResult[];
+  /**
+   * Seeded-inbox email ids (e.g. "inbox-004") this call's triggering
+   * context was built from — not real `inspections` table UUIDs, since
+   * read_inbox scores each email in-memory rather than writing a real
+   * inspection row per email. Kept for an accurate audit trail even
+   * though it won't resolve through GET /events/{id} today.
+   */
+  triggeringContentIds: string[];
 }
 
 export interface RunProtectedAgentRequest {
@@ -145,8 +153,9 @@ async function executeTool(
   const triggeringBands = [...emailRiskById.values()];
   const anyUntrusted = emailRiskById.size > 0; // every inbox email is untrusted by definition (LLD §2.1)
 
+  const triggeringContentIds = [...emailRiskById.keys()];
   const guardDecision = runActionGuard(
-    { tool: call.name, args, sessionId: request.sessionId, triggeringContentIds: [...emailRiskById.keys()] },
+    { tool: call.name, args, sessionId: request.sessionId, triggeringContentIds },
     { triggeringBands, anyTriggeringContentUntrusted: anyUntrusted, recentHighRiskCallCount, knownSecrets: request.knownSecrets },
   );
 
@@ -156,6 +165,7 @@ async function executeTool(
     guardOutcome: guardDecision.outcome,
     guardReason: guardDecision.reason,
     checks: guardDecision.checks,
+    triggeringContentIds,
   };
 
   if (guardDecision.outcome === "BLOCK") {

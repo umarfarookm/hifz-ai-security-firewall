@@ -342,6 +342,13 @@ export class SupabaseAuditWriter implements AuditWriter {
         .select("model_tag, verdict, steps, latency_ms, status")
         .eq("inspection_id", id)
         .maybeSingle(),
+      // Only ever matches a tool call triggered by content that itself went
+      // through POST /inspect and got a real inspection row (triggering_
+      // inspection_ids holds that row's id). Tool calls from POST /agent/run
+      // are triggered by seeded-inbox email ids instead (see agent-run.ts),
+      // not inspection UUIDs, so they never show up here — that's a known
+      // scope limit, not a bug: this section only covers guard checks for
+      // an /inspect-originated event, not the live agent demo.
       inspection.session_id
         ? this.client
             .from("tool_calls")

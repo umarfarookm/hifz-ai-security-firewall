@@ -128,6 +128,20 @@ describe("runProtectedAgent", () => {
     expect(result.toolCalls[0]).toMatchObject({ tool: "send_email", guardOutcome: "REQUIRE_APPROVAL" });
   });
 
+  it("records which seeded emails triggered a later tool call", async () => {
+    const gateway = new ScriptedGateway([
+      toolCall("c1", "read_inbox", {}),
+      toolCall("c2", "send_email", { to: "reviewer@hifz-demo.test", subject: "Fwd", body: "forwarding" }),
+      finalResponse("c3", "Done."),
+    ]);
+
+    const result = await runProtectedAgent(gateway, baseRequest());
+    const readInbox = result.toolCalls.find((c) => c.tool === "read_inbox")!;
+    const sendEmail = result.toolCalls.find((c) => c.tool === "send_email")!;
+    expect(readInbox.triggeringContentIds).toEqual([]); // nothing read yet when read_inbox itself was proposed
+    expect(sendEmail.triggeringContentIds).toEqual(SEEDED_INBOX.map((e) => e.id)); // every email read_inbox scored
+  });
+
   it("carries the Action Guard's per-check breakdown onto each tool call log entry", async () => {
     const gateway = new ScriptedGateway([
       toolCall("c1", "send_email", { to: "someone@external.example", subject: "Hi", body: "Hello." }),

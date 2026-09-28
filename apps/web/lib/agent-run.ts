@@ -84,7 +84,11 @@ export async function runAgentRun(rawBody: unknown, deps: RunAgentDeps): Promise
         sessionId,
         tool: call.tool,
         argsRedacted: call.args,
-        triggeringInspectionIds: [],
+        // Seeded-inbox email ids (e.g. "inbox-004"), not real inspections.id
+        // UUIDs — read_inbox scores each email in-memory rather than writing
+        // a real inspection row per email, so GET /events/{id} won't resolve
+        // these. Kept for an accurate audit trail regardless.
+        triggeringInspectionIds: call.triggeringContentIds,
         outcome: call.guardOutcome,
         checks: call.checks,
       });

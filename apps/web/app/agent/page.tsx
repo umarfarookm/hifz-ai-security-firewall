@@ -169,6 +169,18 @@ function ToolCallStep({ call }: { call: ToolCallLogEntry }) {
         <GuardBadge outcome={call.guardOutcome} />
       </div>
       <p className="mt-1 text-[12px] text-ink-faint">{call.guardReason}</p>
+      {call.checks.length > 0 && (
+        <ul className="mt-2 space-y-0.5 text-[11px] text-ink-faint">
+          {call.checks.map((check) => (
+            <li key={check.checkId}>
+              <span className={check.passed ? "text-[color:var(--band-low)]" : "text-[color:var(--band-critical)]"}>
+                {check.passed ? "✓" : "✗"}
+              </span>{" "}
+              {check.checkId}: {check.detail}
+            </li>
+          ))}
+        </ul>
+      )}
       {Object.keys(call.args).length > 0 && (
         <pre className="mt-2 overflow-x-auto rounded bg-black/30 p-2 font-mono text-[11px] text-ink-dim">{JSON.stringify(call.args, null, 2)}</pre>
       )}

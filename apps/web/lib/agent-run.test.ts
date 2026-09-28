@@ -94,6 +94,19 @@ describe("runAgentRun", () => {
     expect(sendEmailCall?.checks.length).toBeGreaterThan(0);
   });
 
+  it("persists which seeded emails triggered a tool call, not an empty array", async () => {
+    const gateway = new ScriptedGateway([
+      { kind: "tool_calls", calls: [{ id: "c1", name: "read_inbox", argsJson: "{}" }] },
+      { kind: "tool_calls", calls: [{ id: "c2", name: "read_secrets", argsJson: JSON.stringify({ name: "db_password" }) }] },
+      { kind: "tool_calls", calls: [{ id: "c3", name: "final_response", argsJson: JSON.stringify({ message: "done" }) }] },
+    ]);
+    const audit = new InMemoryAuditWriter();
+    await runAgentRun({ instruction: "read the inbox then check secrets" }, baseDeps({ gateway, audit }));
+
+    const secretsCall = audit.toolCalls.find((c) => c.tool === "read_secrets");
+    expect(secretsCall?.triggeringInspectionIds.length).toBeGreaterThan(0);
+  });
+
   it("seeds G6 from prior tool_calls in the same session, across separate /agent/run calls", async () => {
     const sessionId = randomUUID();
     const audit = new InMemoryAuditWriter();
