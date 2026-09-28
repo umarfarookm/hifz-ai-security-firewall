@@ -2,6 +2,9 @@ import { NextResponse } from "next/server";
 import { runAgentRun } from "../../../../../lib/agent-run.js";
 import { getAuditWriter, getEnv, getGateway, parseJsonBody, rateLimitOrNull } from "../../../../../lib/api-helpers.js";
 
+/** Fixed per docs/architecture/LLD.md §9 ("3 req/min") — not derived from RATE_LIMIT_PER_IP_PER_MIN, which is /inspect's own limit. */
+const AGENT_RUN_RATE_LIMIT_PER_MIN = 3;
+
 /**
  * POST /api/v1/agent/run — docs/architecture/LLD.md §4. Runs the protected
  * email demo agent (stage ⑦) behind the Action Guard (stage ⑧). Stricter
@@ -10,7 +13,7 @@ import { getAuditWriter, getEnv, getGateway, parseJsonBody, rateLimitOrNull } fr
 export async function POST(req: Request) {
   const env = getEnv();
 
-  const limited = rateLimitOrNull(req, Math.max(1, Math.floor(env.RATE_LIMIT_PER_IP_PER_MIN / 2)));
+  const limited = rateLimitOrNull(req, AGENT_RUN_RATE_LIMIT_PER_MIN);
   if (limited) return limited;
 
   const body = await parseJsonBody(req);

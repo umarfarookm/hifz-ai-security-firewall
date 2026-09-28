@@ -8,10 +8,13 @@ import {
   scoreRisk,
   type AttackType,
   type ContentType,
+  type InvestigatorVerdict,
   type LlmStatus,
   type PolicyAction,
   type ProvenanceSource,
   type RiskBand,
+  type ScoreContribution,
+  type Signal,
   type TrustLevel,
 } from "@hifz/firewall-core";
 import type { InvestigatorTools, ModelGateway } from "@hifz/agents";
@@ -41,6 +44,12 @@ export interface InspectResponseBody {
   eventId: string;
   llmStatus: LlmStatus;
   timings: Record<string, number>;
+  /** Score breakdown — LLD §10's Playground screen. */
+  contributions: ScoreContribution[];
+  /** Rule-detector hits, with evidence spans — the Playground's evidence highlights. */
+  signals: Signal[];
+  /** Present only when the investigator LLM actually ran (llmStatus === "ok"). */
+  verdict: InvestigatorVerdict | null;
 }
 
 export type InspectOutcome =
@@ -146,6 +155,7 @@ export async function runInspection(rawBody: unknown, deps: RunInspectionDeps): 
         llmStatus: escalation.llmStatus,
       },
       timings,
+      contributions: riskAssessment.contributions,
     });
 
     await deps.audit.writeSignals(inspectionId, signals);
@@ -155,7 +165,7 @@ export async function runInspection(rawBody: unknown, deps: RunInspectionDeps): 
         modelTag: escalation.verdict.modelTag,
         verdict: escalation.verdict,
         steps: escalation.stepsTaken,
-        latencyMs: timings.investigate ?? 0,
+        latencyMs: Math.round(timings.investigate ?? 0),
         status: escalation.llmStatus,
       });
     }
@@ -175,6 +185,9 @@ export async function runInspection(rawBody: unknown, deps: RunInspectionDeps): 
         eventId: inspectionId,
         llmStatus: escalation.llmStatus,
         timings,
+        contributions: riskAssessment.contributions,
+        signals,
+        verdict: escalation.verdict,
       },
     };
   } catch (err) {

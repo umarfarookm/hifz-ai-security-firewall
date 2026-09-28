@@ -8,6 +8,7 @@ import type {
   PolicyAction,
   ProvenanceSource,
   RiskBand,
+  ScoreContribution,
   Signal,
   TrustLevel,
 } from "@hifz/firewall-core";
@@ -70,6 +71,7 @@ export interface EventDetail extends EventSummary {
   policyRuleId: string;
   contentExcerpt: string;
   timings: Record<string, number>;
+  contributions: ScoreContribution[];
   signals: { detectorId: string; attackType: string; severity: string; confidence: number; layer: string; evidence: unknown }[];
   verdict: { modelTag: string; verdict: InvestigatorVerdict; steps: string[]; latencyMs: number; status: Decision["llmStatus"] } | null;
   toolCalls: { tool: string; outcome: GuardDecision["outcome"]; checks: GuardDecision["checks"] }[];
@@ -89,6 +91,7 @@ export interface InspectionRecord {
   finalBand: RiskBand;
   decision: Decision;
   timings: Record<string, number>;
+  contributions: ScoreContribution[];
 }
 
 export interface LlmVerdictRecord {
@@ -140,6 +143,7 @@ export class SupabaseAuditWriter implements AuditWriter {
         reason: record.decision.reason,
         llm_status: record.decision.llmStatus,
         timings: record.timings,
+        contributions: record.contributions,
       })
       .select("id")
       .single();
@@ -272,7 +276,7 @@ export class SupabaseAuditWriter implements AuditWriter {
     const { data: inspection, error } = await this.client
       .from("inspections")
       .select(
-        "id, created_at, content_type, source, trust, score, final_band, action, reason, policy_rule_id, content_excerpt, timings, session_id",
+        "id, created_at, content_type, source, trust, score, final_band, action, reason, policy_rule_id, content_excerpt, timings, contributions, session_id",
       )
       .eq("id", id)
       .maybeSingle();
@@ -308,6 +312,7 @@ export class SupabaseAuditWriter implements AuditWriter {
       policyRuleId: inspection.policy_rule_id as string,
       contentExcerpt: inspection.content_excerpt as string,
       timings: (inspection.timings as Record<string, number>) ?? {},
+      contributions: (inspection.contributions as ScoreContribution[]) ?? [],
       attackTypes: attackTypesByInspection.get(id) ?? [],
       signals: (signalRows ?? []).map((s) => ({
         detectorId: s.detector_id as string,
@@ -438,6 +443,7 @@ export class InMemoryAuditWriter implements AuditWriter {
       policyRuleId: record.decision.policyRuleId,
       contentExcerpt: record.contentExcerpt,
       timings: record.timings,
+      contributions: record.contributions,
       signals: this.signals
         .filter((s) => s.inspectionId === id)
         .flatMap((s) =>
