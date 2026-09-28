@@ -283,7 +283,7 @@ Every transition is an audit event with reviewer id and comment.
 | GET `/health` | App, DB, and LLM provider status | Public | — |
 
 **POST /inspect — request:** `content`, `contentType`, `source`, `origin?`, `sessionId?`
-**Response:** `decision`, `finalBand`, `score`, `attackTypes[]`, `reason`, `sanitizedContent?`, `eventId`, `llmStatus`, `timings{}`
+**Response:** `decision`, `finalBand`, `score`, `attackTypes[]`, `reason`, `sanitizedContent?`, `eventId`, `llmStatus`, `timings{}`, `contributions[]`, `signals[]`, `verdict?` — the last three added in task 2.10 so the Playground can render its score breakdown and evidence highlights from a single call, instead of a second round trip to `/events/{id}`.
 
 **Errors:** `400` invalid input (schema errors listed) · `413` over size cap · `429` rate limited · `503` only if the core pipeline itself fails (an LLM failure never yields 503 — it degrades per §3.5).
 
