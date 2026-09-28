@@ -10,9 +10,10 @@ import { stripZeroWidthAndBidi, toNfkc } from "./unicode.js";
  * output (visible text + hidden segments) and applies, in order:
  *   1. NFKC normalization
  *   2. Zero-width / bidi-control stripping
- *   3–4. Homoglyph + whitespace/case folding — not persisted; see
- *        homoglyph.ts's foldForMatching, exported for detectors (1.8) to
- *        call directly. Used here only to flag the `mixed_script` anomaly.
+ *   3–4. Homoglyph + whitespace/case folding — not persisted; used here
+ *        only to flag the `mixed_script` anomaly. Detectors (1.8) call
+ *        homoglyph.ts's foldHomoglyphsOnly directly on each layer at match
+ *        time instead (offset-preserving, unlike foldForMatching below).
  *   5. Recursive decoding of Base64/hex/URL/HTML-entity runs, applied to
  *      both the visible text and every hidden segment, sharing one
  *      depth/byte budget across all of it.

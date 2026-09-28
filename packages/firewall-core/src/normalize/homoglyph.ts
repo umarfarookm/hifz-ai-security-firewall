@@ -70,18 +70,33 @@ export interface FoldResult {
 }
 
 /**
- * Homoglyph-folds, whitespace-folds, and case-folds `text`. The result is
- * for matching only — it is not fit to display to a human (it discards
- * exactly the visual distinction an attacker is relying on).
+ * Homoglyph-folds only — a strict one-character-for-one-character
+ * substitution, so `folded` is always the same length as `text` and every
+ * offset into one is a valid offset into the other. This is what detectors
+ * (task 1.8) actually match patterns against, so a span found in `folded`
+ * can be sliced directly out of the original `text` for evidence — showing
+ * the real (possibly homoglyph-spoofed) characters, not the folded ones.
  */
-export function foldForMatching(text: string): FoldResult {
+export function foldHomoglyphsOnly(text: string): FoldResult {
   let homoglyphCount = 0;
-  const homoglyphFolded = text.replace(HOMOGLYPH_PATTERN, (ch) => {
+  const folded = text.replace(HOMOGLYPH_PATTERN, (ch) => {
     homoglyphCount++;
     return HOMOGLYPH_MAP[ch]!;
   });
+  return { folded, homoglyphCount };
+}
 
+/**
+ * Homoglyph-folds, then whitespace-folds and case-folds `text`. The result
+ * is for matching only — it is not fit to display to a human (it discards
+ * exactly the visual distinction an attacker is relying on), and offsets
+ * into it no longer correspond to offsets into `text` (whitespace
+ * collapsing changes length). `normalize()` uses this only to compute the
+ * `mixed_script` anomaly count; detectors use `foldHomoglyphsOnly` instead,
+ * where offset alignment matters.
+ */
+export function foldForMatching(text: string): FoldResult {
+  const { folded: homoglyphFolded, homoglyphCount } = foldHomoglyphsOnly(text);
   const folded = homoglyphFolded.replace(/\s+/g, " ").trim().toLowerCase();
-
   return { folded, homoglyphCount };
 }
