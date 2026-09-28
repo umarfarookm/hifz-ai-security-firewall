@@ -10,7 +10,7 @@ import type { LlmVerdict } from "./verdict-schema.js";
 import { llmVerdictSchema, SUBMIT_VERDICT_TOOL } from "./verdict-schema.js";
 
 const MAX_INVESTIGATIVE_TOOL_CALLS = 4;
-const MAX_RETRIES_ON_INVALID = 1;
+const DEFAULT_MAX_RETRIES_ON_INVALID = 1;
 /** Hard ceiling on loop iterations, independent of the retry/tool-call counters above — a safety net against a model that won't converge. */
 const MAX_LOOP_ITERATIONS = 12;
 
@@ -23,6 +23,10 @@ export interface InvestigateRequest {
   detectorVersion: string;
   cache?: VerdictCache;
   timeoutMs?: number;
+  /** From LLM_TEMPERATURE — omit to use the gateway's own default (0, deterministic-as-possible). */
+  temperature?: number;
+  /** From LLM_MAX_RETRIES — retries on a no-tool-call or invalid submit_verdict reply. Defaults to 1. */
+  maxRetries?: number;
 }
 
 export interface InvestigateResult {
@@ -51,6 +55,7 @@ export async function investigate(gateway: ModelGateway, request: InvestigateReq
   const stepsTaken: string[] = [];
   let investigativeToolCalls = 0;
   let invalidAttempts = 0;
+  const maxRetries = request.maxRetries ?? DEFAULT_MAX_RETRIES_ON_INVALID;
 
   try {
     for (let iteration = 0; iteration < MAX_LOOP_ITERATIONS; iteration++) {
@@ -60,11 +65,12 @@ export async function investigate(gateway: ModelGateway, request: InvestigateReq
         tools,
         history,
         ...(request.timeoutMs === undefined ? {} : { timeoutMs: request.timeoutMs }),
+        ...(request.temperature === undefined ? {} : { temperature: request.temperature }),
       });
 
       if (turn.kind === "no_tool_call") {
         invalidAttempts++;
-        if (invalidAttempts > MAX_RETRIES_ON_INVALID) {
+        if (invalidAttempts > maxRetries) {
           return { verdict: null, llmStatus: "invalid_output", stepsTaken };
         }
         continue;
@@ -75,7 +81,7 @@ export async function investigate(gateway: ModelGateway, request: InvestigateReq
         const parsed = parseVerdict(submitCall.argsJson, request.content);
         if (!parsed) {
           invalidAttempts++;
-          if (invalidAttempts > MAX_RETRIES_ON_INVALID) {
+          if (invalidAttempts > maxRetries) {
             return { verdict: null, llmStatus: "invalid_output", stepsTaken };
           }
           history.push({ role: "assistant", toolCalls: [submitCall] });

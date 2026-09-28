@@ -122,6 +122,27 @@ describe("investigate", () => {
     expect(second.verdict?.isInjection).toBe(true);
   });
 
+  it("forwards a configured temperature to the gateway (LLM_TEMPERATURE)", async () => {
+    const gateway = new ScriptedGateway([submitVerdictCall("call-1", validVerdictArgs())]);
+    await investigate(gateway, baseRequest({ temperature: 0.4 }));
+    expect(gateway.requestsSeen[0]?.temperature).toBe(0.4);
+  });
+
+  it("omits temperature from the gateway request when not configured", async () => {
+    const gateway = new ScriptedGateway([submitVerdictCall("call-1", validVerdictArgs())]);
+    await investigate(gateway, baseRequest());
+    expect(gateway.requestsSeen[0]?.temperature).toBeUndefined();
+  });
+
+  it("respects a configured maxRetries of 0 — no second attempt on invalid output", async () => {
+    const badArgs = validVerdictArgs({ band: "SEVERE" }); // not a valid enum value
+    const gateway = new ScriptedGateway([submitVerdictCall("call-1", badArgs)]);
+
+    const result = await investigate(gateway, baseRequest({ maxRetries: 0 }));
+    expect(result.llmStatus).toBe("invalid_output");
+    expect(gateway.requestsSeen).toHaveLength(1); // no retry attempted
+  });
+
   it("uses a different cache key for different content", async () => {
     const cache = new InMemoryVerdictCache();
     const gateway = new ScriptedGateway([submitVerdictCall("call-1", validVerdictArgs()), submitVerdictCall("call-2", validVerdictArgs())]);

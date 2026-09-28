@@ -41,6 +41,8 @@ function baseDeps(overrides: Partial<RunInspectionDeps> = {}): RunInspectionDeps
     detectorVersion: "test-v1",
     sessionRiskDecayMinutes: 30,
     investigatorTimeoutMs: 20_000,
+    investigatorTemperature: 0,
+    investigatorMaxRetries: 1,
     ...overrides,
   };
 }

@@ -24,6 +24,8 @@ export async function POST(req: Request) {
     detectorVersion: "detectors-v1",
     sessionRiskDecayMinutes: env.SESSION_RISK_DECAY_MINUTES,
     investigatorTimeoutMs: env.LLM_TIMEOUT_MS,
+    investigatorTemperature: env.LLM_TEMPERATURE,
+    investigatorMaxRetries: env.LLM_MAX_RETRIES,
     ...(verdictCache ? { verdictCache } : {}),
   });
 

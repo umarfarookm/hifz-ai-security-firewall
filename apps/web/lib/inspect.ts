@@ -76,6 +76,10 @@ export interface RunInspectionDeps {
   verdictCache?: VerdictCache;
   /** LLD §9's investigator budget ("20s total") — from LLM_TIMEOUT_MS. */
   investigatorTimeoutMs: number;
+  /** From LLM_TEMPERATURE (".env.example: deterministic-as-possible verdicts"). */
+  investigatorTemperature: number;
+  /** From LLM_MAX_RETRIES. */
+  investigatorMaxRetries: number;
 }
 
 export async function runInspection(rawBody: unknown, deps: RunInspectionDeps): Promise<InspectOutcome> {
@@ -131,6 +135,8 @@ export async function runInspection(rawBody: unknown, deps: RunInspectionDeps): 
         tools: buildInvestigatorTools(deps.audit, sessionId),
         detectorVersion: deps.detectorVersion,
         timeoutMs: deps.investigatorTimeoutMs,
+        temperature: deps.investigatorTemperature,
+        maxRetries: deps.investigatorMaxRetries,
         ...(deps.verdictCache ? { cache: deps.verdictCache } : {}),
       },
     });
