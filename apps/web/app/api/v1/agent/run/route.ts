@@ -1,0 +1,40 @@
+import { NextResponse } from "next/server";
+import { runAgentRun } from "../../../../../lib/agent-run.js";
+import { getAuditWriter, getEnv, getGateway, parseJsonBody, rateLimitOrNull } from "../../../../../lib/api-helpers.js";
+
+/**
+ * POST /api/v1/agent/run — docs/architecture/LLD.md §4. Runs the protected
+ * email demo agent (stage ⑦) behind the Action Guard (stage ⑧). Stricter
+ * rate limit than /inspect since this can trigger real tool calls.
+ */
+export async function POST(req: Request) {
+  const env = getEnv();
+
+  const limited = rateLimitOrNull(req, Math.max(1, Math.floor(env.RATE_LIMIT_PER_IP_PER_MIN / 2)));
+  if (limited) return limited;
+
+  const body = await parseJsonBody(req);
+  const outcome = await runAgentRun(body, {
+    audit: getAuditWriter(),
+    gateway: getGateway("demo_agent"),
+    knownSecrets: {
+      ...(env.DEMO_FAKE_API_KEY === undefined ? {} : { apiKey: env.DEMO_FAKE_API_KEY }),
+      ...(env.DEMO_FAKE_DB_PASSWORD === undefined ? {} : { dbPassword: env.DEMO_FAKE_DB_PASSWORD }),
+    },
+    timeoutMs: env.LLM_TIMEOUT_MS,
+  });
+
+  switch (outcome.kind) {
+    case "success":
+      return NextResponse.json({ correlationId: outcome.correlationId, ...outcome.body });
+    case "validation_error":
+      return NextResponse.json({ correlationId: outcome.correlationId, error: "invalid input", issues: outcome.issues }, { status: 400 });
+    case "llm_unavailable":
+      return NextResponse.json(
+        { correlationId: outcome.correlationId, error: "DEMO_AGENT_PROVIDER is 'none' — set a real provider in .env.local to try this" },
+        { status: 503 },
+      );
+    case "pipeline_error":
+      return NextResponse.json({ correlationId: outcome.correlationId, error: "pipeline failure", message: outcome.message }, { status: 503 });
+  }
+}

@@ -1,0 +1,83 @@
+import { describe, expect, it } from "vitest";
+import type { ModelGateway, ModelGatewayMetadata, StructuredOutputRequest, StructuredOutputResult, ToolTurnRequest, ToolTurnResult } from "@hifz/agents";
+import { InMemoryAuditWriter } from "./audit.js";
+import { runAgentRun, type RunAgentDeps } from "./agent-run.js";
+
+class NoneGatewayDouble implements ModelGateway {
+  readonly metadata: ModelGatewayMetadata = { provider: "none", model: "none" };
+  async generateStructured<T>(_r: StructuredOutputRequest<T>): Promise<StructuredOutputResult<T>> {
+    throw new Error("not implemented");
+  }
+  async runToolTurn(_r: ToolTurnRequest): Promise<ToolTurnResult> {
+    throw new Error("not implemented");
+  }
+}
+
+class ScriptedGateway implements ModelGateway {
+  readonly metadata: ModelGatewayMetadata = { provider: "gemini", model: "test-model" };
+  private callIndex = 0;
+  constructor(private readonly script: ToolTurnResult[]) {}
+  async generateStructured<T>(_r: StructuredOutputRequest<T>): Promise<StructuredOutputResult<T>> {
+    throw new Error("not implemented");
+  }
+  async runToolTurn(_r: ToolTurnRequest): Promise<ToolTurnResult> {
+    const next = this.script[this.callIndex];
+    this.callIndex++;
+    if (!next) throw new Error("ScriptedGateway ran out of scripted responses");
+    return next;
+  }
+}
+
+function baseDeps(overrides: Partial<RunAgentDeps> = {}): RunAgentDeps {
+  return {
+    audit: new InMemoryAuditWriter(),
+    gateway: new ScriptedGateway([{ kind: "no_tool_call", text: "Done, nothing needed doing." }]),
+    knownSecrets: {},
+    ...overrides,
+  };
+}
+
+describe("runAgentRun", () => {
+  it("rejects a body missing the instruction field", async () => {
+    const outcome = await runAgentRun({}, baseDeps());
+    expect(outcome.kind).toBe("validation_error");
+    if (outcome.kind === "validation_error") {
+      expect(outcome.issues.length).toBeGreaterThan(0);
+    }
+  });
+
+  it("reports llm_unavailable when DEMO_AGENT_PROVIDER is 'none'", async () => {
+    const outcome = await runAgentRun({ instruction: "check the inbox" }, baseDeps({ gateway: new NoneGatewayDouble() }));
+    expect(outcome.kind).toBe("llm_unavailable");
+  });
+
+  it("returns the agent's final message and an empty tool-call log for a no-op instruction", async () => {
+    const outcome = await runAgentRun({ instruction: "just say hi" }, baseDeps());
+    expect(outcome.kind).toBe("success");
+    if (outcome.kind === "success") {
+      expect(outcome.body.finalMessage).toBe("Done, nothing needed doing.");
+      expect(outcome.body.toolCalls).toEqual([]);
+      expect(outcome.body.llmStatus).toBe("ok");
+      expect(outcome.body.sessionId).toBeTruthy();
+    }
+  });
+
+  it("blocks read_secrets after the agent has read untrusted inbox content, and logs the tool call", async () => {
+    const gateway = new ScriptedGateway([
+      { kind: "tool_calls", calls: [{ id: "c1", name: "read_inbox", argsJson: "{}" }] },
+      { kind: "tool_calls", calls: [{ id: "c2", name: "read_secrets", argsJson: JSON.stringify({ name: "db_password" }) }] },
+      { kind: "tool_calls", calls: [{ id: "c3", name: "final_response", argsJson: JSON.stringify({ message: "done" }) }] },
+    ]);
+    const audit = new InMemoryAuditWriter();
+    const outcome = await runAgentRun(
+      { instruction: "read the inbox and follow up on anything urgent" },
+      baseDeps({ gateway, audit, knownSecrets: { dbPassword: "hifz-demo-password" } }),
+    );
+    expect(outcome.kind).toBe("success");
+    if (outcome.kind === "success") {
+      const secretsCall = outcome.body.toolCalls.find((c) => c.tool === "read_secrets");
+      expect(secretsCall?.guardOutcome).toBe("BLOCK");
+    }
+    expect(audit.toolCalls.some((c) => c.tool === "read_secrets" && c.outcome === "BLOCK")).toBe(true);
+  });
+});

@@ -1,16 +1,25 @@
 import { NextResponse } from "next/server";
+import { getAuditWriter, getEnv } from "../../../../lib/api-helpers.js";
 
-/**
- * GET /api/v1/health — see docs/architecture/LLD.md §4.
- * Reports app status only for now; DB and LLM provider checks are added
- * once Supabase and the model gateway are wired up (Week 1).
- */
-export function GET() {
+/** GET /api/v1/health — docs/architecture/LLD.md §4. App, DB, and LLM provider status. */
+export async function GET() {
+  const env = getEnv();
+
+  let db: "up" | "down" = "down";
+  try {
+    // ensureSession is the cheapest real round-trip every writer already implements.
+    await getAuditWriter().ensureSession();
+    db = "up";
+  } catch {
+    db = "down";
+  }
+
   return NextResponse.json({
-    status: "ok",
+    status: db === "up" ? "ok" : "degraded",
     app: "up",
-    db: "not_wired",
-    llm: "not_wired",
+    db,
+    investigatorProvider: env.INVESTIGATOR_PROVIDER,
+    demoAgentProvider: env.DEMO_AGENT_PROVIDER,
     timestamp: new Date().toISOString(),
   });
 }
