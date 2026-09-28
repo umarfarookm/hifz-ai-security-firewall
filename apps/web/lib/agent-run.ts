@@ -1,7 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { z } from "zod";
 import type { ModelGateway, ProtectedAgentDeps, RunProtectedAgentResult } from "@hifz/agents";
-import { runProtectedAgent, SEEDED_INBOX } from "@hifz/agents";
+import { runProtectedAgent, SEEDED_INBOX, TOOL_REGISTRY } from "@hifz/agents";
 import type { AuditWriter } from "./audit.js";
 
 const agentRunRequestSchema = z.object({
@@ -23,6 +23,13 @@ export type AgentRunOutcome =
   | { kind: "validation_error"; correlationId: string; issues: string[] }
   | { kind: "llm_unavailable"; correlationId: string }
   | { kind: "pipeline_error"; correlationId: string; message: string };
+
+const HIGH_RISK_TOOL_NAMES = Object.values(TOOL_REGISTRY)
+  .filter((tool) => tool.riskClass !== "low")
+  .map((tool) => tool.name);
+
+/** G6's window (LLD.md §3.9: "at most 3 high-risk calls allowed in 5 min"). */
+const G6_WINDOW_MINUTES = 5;
 
 export interface RunAgentDeps {
   audit: AuditWriter;
@@ -61,12 +68,14 @@ export async function runAgentRun(rawBody: unknown, deps: RunAgentDeps): Promise
   try {
     const sessionId = await deps.audit.ensureSession(body.sessionId);
     const knownSecretValues = [deps.knownSecrets.apiKey, deps.knownSecrets.dbPassword].filter((s): s is string => Boolean(s));
+    const initialHighRiskCallCount = await deps.audit.countRecentToolCalls(sessionId, HIGH_RISK_TOOL_NAMES, G6_WINDOW_MINUTES);
 
     const result = await runProtectedAgent(deps.gateway, {
       instruction: body.instruction,
       sessionId,
       deps: buildAgentDeps(deps.knownSecrets),
       knownSecrets: knownSecretValues,
+      initialHighRiskCallCount,
       ...(deps.timeoutMs === undefined ? {} : { timeoutMs: deps.timeoutMs }),
     });
 
@@ -77,7 +86,7 @@ export async function runAgentRun(rawBody: unknown, deps: RunAgentDeps): Promise
         argsRedacted: call.args,
         triggeringInspectionIds: [],
         outcome: call.guardOutcome,
-        checks: [],
+        checks: call.checks,
       });
     }
 

@@ -1,3 +1,4 @@
+import { randomUUID } from "node:crypto";
 import { describe, expect, it } from "vitest";
 import type { ModelGateway, ModelGatewayMetadata, StructuredOutputRequest, StructuredOutputResult, ToolTurnRequest, ToolTurnResult } from "@hifz/agents";
 import { InMemoryAuditWriter } from "./audit.js";
@@ -79,5 +80,46 @@ describe("runAgentRun", () => {
       expect(secretsCall?.guardOutcome).toBe("BLOCK");
     }
     expect(audit.toolCalls.some((c) => c.tool === "read_secrets" && c.outcome === "BLOCK")).toBe(true);
+  });
+
+  it("persists the Action Guard's per-check breakdown, not an empty array", async () => {
+    const gateway = new ScriptedGateway([
+      { kind: "tool_calls", calls: [{ id: "c1", name: "send_email", argsJson: JSON.stringify({ to: "x@external.example", subject: "s", body: "b" }) }] },
+      { kind: "tool_calls", calls: [{ id: "c2", name: "final_response", argsJson: JSON.stringify({ message: "done" }) }] },
+    ]);
+    const audit = new InMemoryAuditWriter();
+    await runAgentRun({ instruction: "email someone" }, baseDeps({ gateway, audit }));
+
+    const sendEmailCall = audit.toolCalls.find((c) => c.tool === "send_email");
+    expect(sendEmailCall?.checks.length).toBeGreaterThan(0);
+  });
+
+  it("seeds G6 from prior tool_calls in the same session, across separate /agent/run calls", async () => {
+    const sessionId = randomUUID();
+    const audit = new InMemoryAuditWriter();
+    await audit.ensureSession(sessionId);
+    // Simulate 3 high-risk calls already made in an earlier /agent/run for this session.
+    for (let i = 0; i < 3; i++) {
+      await audit.writeToolCall({
+        sessionId,
+        tool: "send_email",
+        argsRedacted: {},
+        triggeringInspectionIds: [],
+        outcome: "EXECUTE",
+        checks: [],
+      });
+    }
+
+    const gateway = new ScriptedGateway([
+      { kind: "tool_calls", calls: [{ id: "c1", name: "send_email", argsJson: JSON.stringify({ to: "x@hifz-demo.test", subject: "s", body: "b" }) }] },
+      { kind: "tool_calls", calls: [{ id: "c2", name: "final_response", argsJson: JSON.stringify({ message: "done" }) }] },
+    ]);
+
+    const outcome = await runAgentRun({ instruction: "send an email", sessionId }, baseDeps({ gateway, audit }));
+    expect(outcome.kind).toBe("success");
+    if (outcome.kind === "success") {
+      // The 4th high-risk call overall (1st in this run, but 4th for the session) should trip G6.
+      expect(outcome.body.toolCalls[0]).toMatchObject({ tool: "send_email", guardOutcome: "REQUIRE_APPROVAL" });
+    }
   });
 });

@@ -1,4 +1,4 @@
-import type { LlmStatus, RiskBand } from "@hifz/firewall-core";
+import type { GuardCheckResult, LlmStatus, RiskBand } from "@hifz/firewall-core";
 import { ingestEmail, normalize, runDetectors, scoreRisk } from "@hifz/firewall-core";
 import type { ModelGateway } from "../model-gateway.js";
 import type { RequestedToolCall, ToolConversationMessage } from "../tool-types.js";
@@ -20,6 +20,8 @@ export interface ToolCallLogEntry {
   args: Record<string, unknown>;
   guardOutcome: "EXECUTE" | "BLOCK" | "REQUIRE_APPROVAL";
   guardReason: string;
+  /** Per-check G1-G6 breakdown from the Action Guard — for the audit log and the Event detail screen. */
+  checks: GuardCheckResult[];
 }
 
 export interface RunProtectedAgentRequest {
@@ -30,6 +32,8 @@ export interface RunProtectedAgentRequest {
   /** Real values to scan for in outbound tool args (fake secrets only — see .env.example). */
   knownSecrets: string[];
   timeoutMs?: number;
+  /** High-risk tool calls this session already made outside this run (e.g. earlier /agent/run calls) — seeds G6's rate limit so it holds across calls, not just within one run. Resolved by the caller from the audit log. */
+  initialHighRiskCallCount?: number;
 }
 
 export interface RunProtectedAgentResult {
@@ -64,7 +68,7 @@ export async function runProtectedAgent(gateway: ModelGateway, request: RunProte
   // Populated when read_inbox runs; consulted by the Action Guard's G5 taint
   // check for any later action a given email's content may have triggered.
   const emailRiskById = new Map<string, RiskBand>();
-  let recentHighRiskCallCount = 0;
+  let recentHighRiskCallCount = request.initialHighRiskCallCount ?? 0;
 
   try {
     for (let iteration = 0; iteration < MAX_LOOP_ITERATIONS; iteration++) {
@@ -94,12 +98,12 @@ export async function runProtectedAgent(gateway: ModelGateway, request: RunProte
       for (const call of turn.calls) {
         const outcome = await executeTool(call, request, emailRiskById, recentHighRiskCallCount);
         toolCallLog.push(outcome.logEntry);
-        // [DECISION] G6's rate limit is tracked only within this single run,
-        // not across separate runProtectedAgent() calls in the same
-        // session — cross-call tracking needs a persistence layer (task
-        // 2.9/Supabase) this package doesn't have. Counts call attempts
-        // regardless of guard outcome, since a burst of blocked attempts is
-        // itself the suspicious pattern G6 exists to catch.
+        // [DECISION] In-loop counting only tracks this single run; the
+        // caller seeds `initialHighRiskCallCount` from the audit log so G6
+        // still holds across separate /agent/run calls in the same session
+        // (see RunProtectedAgentRequest.initialHighRiskCallCount). Counts
+        // call attempts regardless of guard outcome, since a burst of
+        // blocked attempts is itself the suspicious pattern G6 exists to catch.
         if (TOOL_REGISTRY[call.name]?.riskClass !== "low") {
           recentHighRiskCallCount++;
         }
@@ -146,7 +150,13 @@ async function executeTool(
     { triggeringBands, anyTriggeringContentUntrusted: anyUntrusted, recentHighRiskCallCount, knownSecrets: request.knownSecrets },
   );
 
-  const logEntry: ToolCallLogEntry = { tool: call.name, args, guardOutcome: guardDecision.outcome, guardReason: guardDecision.reason };
+  const logEntry: ToolCallLogEntry = {
+    tool: call.name,
+    args,
+    guardOutcome: guardDecision.outcome,
+    guardReason: guardDecision.reason,
+    checks: guardDecision.checks,
+  };
 
   if (guardDecision.outcome === "BLOCK") {
     return { resultForModel: { error: `Action blocked: ${guardDecision.reason}` }, logEntry };

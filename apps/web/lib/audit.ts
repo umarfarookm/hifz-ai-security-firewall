@@ -28,6 +28,9 @@ export interface AuditWriter {
   writeLlmVerdict(inspectionId: string, record: LlmVerdictRecord): Promise<void>;
   writeToolCall(record: ToolCallRecord): Promise<string>;
 
+  /** Count of tool_calls for this session, among `toolNames`, in the last `windowMinutes` — seeds the Action Guard's G6 rate limit so it holds across separate /agent/run calls in the same session, not just within one run. */
+  countRecentToolCalls(sessionId: string, toolNames: string[], windowMinutes: number): Promise<number>;
+
   /** Last 10 decisions for a session — bands and attack types only, no raw content (LLD §3.6). */
   getSessionHistory(sessionId: string): Promise<{ band: RiskBand; attackTypes: string[] }[]>;
   /** Trust level + prior incident count for a content origin (LLD §3.6's getSourceProfile tool). */
@@ -196,6 +199,19 @@ export class SupabaseAuditWriter implements AuditWriter {
     return data.id as string;
   }
 
+  async countRecentToolCalls(sessionId: string, toolNames: string[], windowMinutes: number): Promise<number> {
+    if (toolNames.length === 0) return 0;
+    const since = new Date(Date.now() - windowMinutes * 60_000).toISOString();
+    const { count, error } = await this.client
+      .from("tool_calls")
+      .select("id", { count: "exact", head: true })
+      .eq("session_id", sessionId)
+      .in("tool", toolNames)
+      .gte("created_at", since);
+    if (error) throw new Error(`countRecentToolCalls failed: ${error.message}`);
+    return count ?? 0;
+  }
+
   async getSessionHistory(sessionId: string): Promise<{ band: RiskBand; attackTypes: string[] }[]> {
     const { data: inspections } = await this.client
       .from("inspections")
@@ -357,7 +373,7 @@ export class InMemoryAuditWriter implements AuditWriter {
   public readonly inspections: (InspectionRecord & { id: string })[] = [];
   public readonly signals: { inspectionId: string; signals: Signal[] }[] = [];
   public readonly llmVerdicts: { inspectionId: string; record: LlmVerdictRecord }[] = [];
-  public readonly toolCalls: (ToolCallRecord & { id: string })[] = [];
+  public readonly toolCalls: (ToolCallRecord & { id: string; createdAt: Date })[] = [];
   public readonly sessions = new Set<string>();
 
   async ensureSession(sessionId?: string): Promise<string> {
@@ -382,8 +398,15 @@ export class InMemoryAuditWriter implements AuditWriter {
 
   async writeToolCall(record: ToolCallRecord): Promise<string> {
     const id = randomUUID();
-    this.toolCalls.push({ ...record, id });
+    this.toolCalls.push({ ...record, id, createdAt: new Date() });
     return id;
+  }
+
+  async countRecentToolCalls(sessionId: string, toolNames: string[], windowMinutes: number): Promise<number> {
+    const since = Date.now() - windowMinutes * 60_000;
+    return this.toolCalls.filter(
+      (t) => t.sessionId === sessionId && toolNames.includes(t.tool) && t.createdAt.getTime() >= since,
+    ).length;
   }
 
   async getSessionHistory(sessionId: string): Promise<{ band: RiskBand; attackTypes: string[] }[]> {

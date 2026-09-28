@@ -117,6 +117,28 @@ describe("runProtectedAgent", () => {
     expect(outcomes[3]).toBe("REQUIRE_APPROVAL"); // the 4th high-risk call trips G6
   });
 
+  it("seeds G6 from initialHighRiskCallCount, so a prior run's calls count against this one", async () => {
+    const gateway = new ScriptedGateway([
+      toolCall("c1", "send_email", { to: "user@hifz-demo.test", subject: "s", body: "b" }),
+      finalResponse("c2", "done"),
+    ]);
+
+    const result = await runProtectedAgent(gateway, baseRequest({ initialHighRiskCallCount: 3 }));
+    // Already at 3 from a prior /agent/run call in this session — this one call trips G6 immediately.
+    expect(result.toolCalls[0]).toMatchObject({ tool: "send_email", guardOutcome: "REQUIRE_APPROVAL" });
+  });
+
+  it("carries the Action Guard's per-check breakdown onto each tool call log entry", async () => {
+    const gateway = new ScriptedGateway([
+      toolCall("c1", "send_email", { to: "someone@external.example", subject: "Hi", body: "Hello." }),
+      finalResponse("c2", "Done."),
+    ]);
+
+    const result = await runProtectedAgent(gateway, baseRequest());
+    expect(result.toolCalls[0]?.checks.length).toBeGreaterThan(0);
+    expect(result.toolCalls[0]?.checks.map((c) => c.checkId)).toContain("G3");
+  });
+
   it("ends the turn on a plain-text reply even without final_response", async () => {
     const gateway = new ScriptedGateway([{ kind: "no_tool_call", text: "I don't need any tools for that." }]);
     const result = await runProtectedAgent(gateway, baseRequest());
