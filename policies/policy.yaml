@@ -16,8 +16,8 @@ rules:
     action: REVIEW
 
   - id: POL-004
-    when: "llmStatus in ['unavailable', 'invalid_output'] and ruleBand >= 'MEDIUM'"
-    action: REVIEW
+    when: "llmStatus in ['unavailable', 'invalid_output', 'not_called'] and ruleBand >= 'MEDIUM'"
+    action: REVIEW # or BLOCK, per LLM_FAILURE_MODE — see packages/agents/src/escalation/fail-safe.ts
 
   - id: POL-005
     when: "finalBand == 'MEDIUM'"

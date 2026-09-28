@@ -1,15 +1,74 @@
 # Detector definitions. See docs/architecture/LLD.md §3.3.
 # `version` is included in the LLM verdict cache key — bump it whenever a
 # detector's patterns change so cached verdicts don't go stale silently.
+#
+# Reference only, same as tools.yaml — the real rules are hand-coded in
+# packages/firewall-core/src/detect/rules/*.ts (regex is easier to keep
+# correct and unit-tested there than round-tripped through YAML). Keep this
+# in sync by hand when a detector is added, removed, or its
+# severity/confidence changes.
 version: 1
 
-detectors: []
-# Example shape for when detectors land (Week 1, task 1.8):
-# - id: OVR-001
-#   attackType: instruction_override
-#   severity: high
-#   confidence: 0.9
-#   layers: [visible, hidden, decoded]
-#   patterns:
-#     - "ignore (all|the)? ?(previous|above) instructions"
-#   notes: "Direct override phrasing"
+detectors:
+  - id: OVR-001
+    attackType: instruction_override
+    severity: high
+    confidence: 0.9
+    layers: [visible, hidden, decoded]
+    notes: '"ignore/disregard/forget (all/the/your/my) previous/prior/above/earlier instructions"'
+
+  - id: OVR-002
+    attackType: instruction_override
+    severity: high
+    confidence: 0.8
+    layers: [visible, hidden, decoded]
+    notes: '"new instructions:" marker introducing replacement instructions'
+
+  - id: OVR-003
+    attackType: instruction_override
+    severity: high
+    confidence: 0.85
+    layers: [visible, hidden, decoded]
+    notes: "fake system / end-of-prompt delimiter markers ([SYSTEM], <<SYS>>, <|im_start|>system, etc.)"
+
+  - id: OVR-004
+    attackType: instruction_override
+    severity: high
+    confidence: 0.85
+    layers: [visible, hidden, decoded]
+    notes: '"override/replace your/the instructions", "your new task is to"'
+
+  - id: ROL-001
+    attackType: role_change
+    severity: high
+    confidence: 0.85
+    layers: [visible, hidden, decoded]
+    notes: '"you are now…" / "act as…" combined with an unrestricted/DAN/jailbreak framing'
+
+  - id: ROL-002
+    attackType: role_change
+    severity: high
+    confidence: 0.8
+    layers: [visible, hidden, decoded]
+    notes: "explicit request to enable a named unrestricted/developer/DAN mode"
+
+  - id: ROL-003
+    attackType: role_change
+    severity: high
+    confidence: 0.75
+    layers: [visible, hidden, decoded]
+    notes: '"from now on respond as…" / "from now on you are/will be…"'
+
+  - id: ENC-001
+    attackType: encoded_instructions
+    severity: medium
+    confidence: 0.7
+    layers: [decoded]
+    notes: "fires once per layer the normalizer had to recursively decode (Base64/hex/URL/HTML-entity), regardless of what the decoded content says"
+
+  - id: ENC-002
+    attackType: encoded_instructions
+    severity: medium
+    confidence: 0.6
+    layers: [decoded]
+    notes: "fires when decoding hits the normalizer's depth (3) or byte (50KB) cap — nested/oversized encoding is suspicious on its own"
