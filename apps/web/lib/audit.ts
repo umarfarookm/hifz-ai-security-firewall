@@ -40,6 +40,16 @@ export interface AuditWriter {
   listEvents(filter: EventListFilter): Promise<EventListPage>;
   /** GET /events/{id} (LLD §4) — full evidence for one inspection, or null if it doesn't exist. */
   getEventDetail(id: string): Promise<EventDetail | null>;
+
+  /** LLD §3.10 — the session's risk decayed to now, and its rolling window of recent attack types. A session with no prior activity is risk 0. */
+  getSessionState(sessionId: string, decayMinutes: number): Promise<SessionState>;
+  /** LLD §3.10 — folds this inspection's score into the session's risk (using the same `prior` snapshot `getSessionState` returned, so decay isn't computed twice against a different "now") and appends its attack types, kept to the last 10. */
+  recordSessionActivity(sessionId: string, prior: SessionState, finalScore: number, attackTypes: string[]): Promise<void>;
+}
+
+export interface SessionState {
+  risk: number;
+  recentAttackTypes: string[];
 }
 
 export interface EventListFilter {
@@ -197,6 +207,31 @@ export class SupabaseAuditWriter implements AuditWriter {
       .single();
     if (error || !data) throw new Error(`writeToolCall failed: ${error?.message}`);
     return data.id as string;
+  }
+
+  async getSessionState(sessionId: string, decayMinutes: number): Promise<SessionState> {
+    const { data, error } = await this.client
+      .from("sessions")
+      .select("session_risk, recent_attack_types, last_activity_at")
+      .eq("id", sessionId)
+      .maybeSingle();
+    if (error) throw new Error(`getSessionState failed: ${error.message}`);
+    if (!data) return { risk: 0, recentAttackTypes: [] };
+
+    const elapsedMinutes = (Date.now() - new Date(data.last_activity_at as string).getTime()) / 60_000;
+    const decay = decayMinutes > 0 ? Math.pow(0.5, elapsedMinutes / decayMinutes) : 1;
+    const risk = Math.max(0, Math.min(100, (data.session_risk as number) * decay));
+    return { risk, recentAttackTypes: (data.recent_attack_types as string[] | null) ?? [] };
+  }
+
+  async recordSessionActivity(sessionId: string, prior: SessionState, finalScore: number, attackTypes: string[]): Promise<void> {
+    const newRisk = Math.max(0, Math.min(100, prior.risk + finalScore * 0.3));
+    const recentAttackTypes = [...prior.recentAttackTypes, ...attackTypes].slice(-10);
+    const { error } = await this.client
+      .from("sessions")
+      .update({ session_risk: newRisk, recent_attack_types: recentAttackTypes, last_activity_at: new Date().toISOString() })
+      .eq("id", sessionId);
+    if (error) throw new Error(`recordSessionActivity failed: ${error.message}`);
   }
 
   async countRecentToolCalls(sessionId: string, toolNames: string[], windowMinutes: number): Promise<number> {
@@ -375,11 +410,26 @@ export class InMemoryAuditWriter implements AuditWriter {
   public readonly llmVerdicts: { inspectionId: string; record: LlmVerdictRecord }[] = [];
   public readonly toolCalls: (ToolCallRecord & { id: string; createdAt: Date })[] = [];
   public readonly sessions = new Set<string>();
+  private readonly sessionState = new Map<string, { risk: number; recentAttackTypes: string[]; lastActivityAt: Date }>();
 
   async ensureSession(sessionId?: string): Promise<string> {
     const id = sessionId && UUID_PATTERN.test(sessionId) ? sessionId : randomUUID();
     this.sessions.add(id);
     return id;
+  }
+
+  async getSessionState(sessionId: string, decayMinutes: number): Promise<SessionState> {
+    const state = this.sessionState.get(sessionId);
+    if (!state) return { risk: 0, recentAttackTypes: [] };
+    const elapsedMinutes = (Date.now() - state.lastActivityAt.getTime()) / 60_000;
+    const decay = decayMinutes > 0 ? Math.pow(0.5, elapsedMinutes / decayMinutes) : 1;
+    return { risk: Math.max(0, Math.min(100, state.risk * decay)), recentAttackTypes: state.recentAttackTypes };
+  }
+
+  async recordSessionActivity(sessionId: string, prior: SessionState, finalScore: number, attackTypes: string[]): Promise<void> {
+    const risk = Math.max(0, Math.min(100, prior.risk + finalScore * 0.3));
+    const recentAttackTypes = [...prior.recentAttackTypes, ...attackTypes].slice(-10);
+    this.sessionState.set(sessionId, { risk, recentAttackTypes, lastActivityAt: new Date() });
   }
 
   async writeInspection(record: InspectionRecord): Promise<string> {

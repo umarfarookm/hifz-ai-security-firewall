@@ -159,7 +159,7 @@ async function executeTool(call: RequestedToolCall, tools: InvestigatorTools): P
       case "rescan":
         return await tools.rescan(String(args.text ?? ""));
       case "getSessionHistory":
-        return await tools.getSessionHistory(String(args.sessionId ?? ""));
+        return await tools.getSessionHistory();
       case "getSourceProfile":
         return await tools.getSourceProfile(String(args.origin ?? ""));
       default:

@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { runInspection } from "../../../../lib/inspect.js";
-import { getAuditWriter, getEnv, getGateway, parseJsonBody, rateLimitOrNull } from "../../../../lib/api-helpers.js";
+import { getAuditWriter, getEnv, getGateway, getVerdictCache, parseJsonBody, rateLimitOrNull } from "../../../../lib/api-helpers.js";
 
 /**
  * POST /api/v1/inspect — docs/architecture/LLD.md §4.
@@ -11,16 +11,20 @@ import { getAuditWriter, getEnv, getGateway, parseJsonBody, rateLimitOrNull } fr
 export async function POST(req: Request) {
   const env = getEnv();
 
-  const limited = rateLimitOrNull(req, env.RATE_LIMIT_PER_IP_PER_MIN);
+  const limited = rateLimitOrNull(req, "inspect", env.RATE_LIMIT_PER_IP_PER_MIN);
   if (limited) return limited;
 
   const body = await parseJsonBody(req);
+  const verdictCache = getVerdictCache();
   const outcome = await runInspection(body, {
     audit: getAuditWriter(),
     gateway: getGateway("investigator"),
     escalationBand: { min: env.LLM_ESCALATION_BAND_MIN, max: env.LLM_ESCALATION_BAND_MAX },
     failureMode: env.LLM_FAILURE_MODE,
     detectorVersion: "detectors-v1",
+    sessionRiskDecayMinutes: env.SESSION_RISK_DECAY_MINUTES,
+    investigatorTimeoutMs: env.LLM_TIMEOUT_MS,
+    ...(verdictCache ? { verdictCache } : {}),
   });
 
   switch (outcome.kind) {

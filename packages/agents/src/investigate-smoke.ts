@@ -48,8 +48,8 @@ async function main(): Promise<void> {
         console.log(`[investigate-smoke] tool called: rescan("${text.slice(0, 40)}...")`);
         return { signals: [] };
       },
-      getSessionHistory: async (sessionId) => {
-        console.log(`[investigate-smoke] tool called: getSessionHistory(${sessionId})`);
+      getSessionHistory: async () => {
+        console.log("[investigate-smoke] tool called: getSessionHistory()");
         return SEEDED_SESSION_HISTORY;
       },
       getSourceProfile: async (origin) => {

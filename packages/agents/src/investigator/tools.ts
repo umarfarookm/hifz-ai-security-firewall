@@ -31,7 +31,15 @@ export interface SourceProfile {
 export interface InvestigatorTools {
   decode(text: string): DecodeResult | Promise<DecodeResult>;
   rescan(text: string): RescanResult | Promise<RescanResult>;
-  getSessionHistory(sessionId: string): SessionHistoryEntry[] | Promise<SessionHistoryEntry[]>;
+  /**
+   * No parameters — the current session is already known to whoever wires
+   * this tool up (the API route), not something the model should have to
+   * supply. Earlier this took a `sessionId` argument the model was
+   * expected to provide, but nothing ever told the model what the real
+   * session id was, so it could only ever guess. Bind the real session id
+   * via closure in the implementation instead.
+   */
+  getSessionHistory(): SessionHistoryEntry[] | Promise<SessionHistoryEntry[]>;
   getSourceProfile(origin: string): SourceProfile | Promise<SourceProfile>;
 }
 
@@ -58,12 +66,8 @@ export const INVESTIGATOR_TOOL_DEFINITIONS: ToolDefinition[] = [
   },
   {
     name: "getSessionHistory",
-    description: "Get the last 10 decisions for this session — risk band and attack types only, never raw content.",
-    parameters: {
-      type: "object",
-      properties: { sessionId: { type: "string", description: "The session identifier." } },
-      required: ["sessionId"],
-    },
+    description: "Get the last 10 decisions for the current session — risk band and attack types only, never raw content.",
+    parameters: { type: "object", properties: {}, required: [] },
   },
   {
     name: "getSourceProfile",

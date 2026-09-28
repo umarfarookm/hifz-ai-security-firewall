@@ -13,7 +13,7 @@ const AGENT_RUN_RATE_LIMIT_PER_MIN = 3;
 export async function POST(req: Request) {
   const env = getEnv();
 
-  const limited = rateLimitOrNull(req, AGENT_RUN_RATE_LIMIT_PER_MIN);
+  const limited = rateLimitOrNull(req, "agent-run", AGENT_RUN_RATE_LIMIT_PER_MIN);
   if (limited) return limited;
 
   const body = await parseJsonBody(req);

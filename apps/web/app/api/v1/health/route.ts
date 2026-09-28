@@ -1,8 +1,10 @@
+import { randomUUID } from "node:crypto";
 import { NextResponse } from "next/server";
 import { getAuditWriter, getEnv } from "../../../../lib/api-helpers.js";
 
 /** GET /api/v1/health — docs/architecture/LLD.md §4. App, DB, and LLM provider status. */
 export async function GET() {
+  const correlationId = randomUUID();
   const env = getEnv();
 
   let db: "up" | "down" = "down";
@@ -15,6 +17,7 @@ export async function GET() {
   }
 
   return NextResponse.json({
+    correlationId,
     status: db === "up" ? "ok" : "degraded",
     app: "up",
     db,

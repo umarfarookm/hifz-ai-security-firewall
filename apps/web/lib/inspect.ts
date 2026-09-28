@@ -17,7 +17,7 @@ import {
   type Signal,
   type TrustLevel,
 } from "@hifz/firewall-core";
-import type { InvestigatorTools, ModelGateway } from "@hifz/agents";
+import type { InvestigatorTools, ModelGateway, VerdictCache } from "@hifz/agents";
 import { runEscalation } from "@hifz/agents";
 import type { AuditWriter } from "./audit.js";
 import { decideStubPolicy } from "./policy-stub.js";
@@ -70,6 +70,12 @@ export interface RunInspectionDeps {
   escalationBand: { min: number; max: number };
   failureMode: "review" | "block";
   detectorVersion: string;
+  /** LLD §3.10's session-risk decay half-life, from SESSION_RISK_DECAY_MINUTES. */
+  sessionRiskDecayMinutes: number;
+  /** LLD §3.6's verdict cache — omit (or pass undefined) when LLM_CACHE_ENABLED is false. */
+  verdictCache?: VerdictCache;
+  /** LLD §9's investigator budget ("20s total") — from LLM_TIMEOUT_MS. */
+  investigatorTimeoutMs: number;
 }
 
 export async function runInspection(rawBody: unknown, deps: RunInspectionDeps): Promise<InspectOutcome> {
@@ -106,10 +112,13 @@ export async function runInspection(rawBody: unknown, deps: RunInspectionDeps): 
       return { kind: "validation_error", correlationId, issues: [`no ingest adapter for contentType "${body.contentType}" yet`] };
     }
 
+    const priorSession = await deps.audit.getSessionState(sessionId, deps.sessionRiskDecayMinutes);
+
     const ingested = timeStage("ingest", () => adapter(body.content));
     const normalized = timeStage("normalize", () => normalize(ingested));
     const signals = timeStage("detect", () => runDetectors(normalized));
-    const riskAssessment = timeStage("score", () => scoreRisk({ signals, sourceTrust: trust, sessionRisk: 0 }));
+    const riskAssessment = timeStage("score", () => scoreRisk({ signals, sourceTrust: trust, sessionRisk: priorSession.risk }));
+    const attackTypes = [...new Set(signals.map((s) => s.attackType))];
 
     const escalationStart = process.hrtime.bigint();
     const escalation = await runEscalation({
@@ -119,8 +128,10 @@ export async function runInspection(rawBody: unknown, deps: RunInspectionDeps): 
       failureMode: deps.failureMode,
       investigatorRequest: {
         content: normalized.visibleText,
-        tools: buildInvestigatorTools(deps.audit),
+        tools: buildInvestigatorTools(deps.audit, sessionId),
         detectorVersion: deps.detectorVersion,
+        timeoutMs: deps.investigatorTimeoutMs,
+        ...(deps.verdictCache ? { cache: deps.verdictCache } : {}),
       },
     });
     timings.investigate = Number(process.hrtime.bigint() - escalationStart) / 1_000_000;
@@ -159,6 +170,7 @@ export async function runInspection(rawBody: unknown, deps: RunInspectionDeps): 
     });
 
     await deps.audit.writeSignals(inspectionId, signals);
+    await deps.audit.recordSessionActivity(sessionId, priorSession, riskAssessment.score, attackTypes);
 
     if (escalation.verdict) {
       await deps.audit.writeLlmVerdict(inspectionId, {
@@ -169,8 +181,6 @@ export async function runInspection(rawBody: unknown, deps: RunInspectionDeps): 
         status: escalation.llmStatus,
       });
     }
-
-    const attackTypes = [...new Set(signals.map((s) => s.attackType))];
 
     return {
       kind: "success",
@@ -195,7 +205,7 @@ export async function runInspection(rawBody: unknown, deps: RunInspectionDeps): 
   }
 }
 
-function buildInvestigatorTools(audit: AuditWriter): InvestigatorTools {
+function buildInvestigatorTools(audit: AuditWriter, sessionId: string): InvestigatorTools {
   return {
     decode: (text: string) => {
       const { layers } = recursivelyDecode(text, "visible", { bytesUsed: 0 });
@@ -206,7 +216,7 @@ function buildInvestigatorTools(audit: AuditWriter): InvestigatorTools {
       const signals = runDetectors({ visibleText: text, hiddenSegments: [], decodedLayers: [], transforms: [], anomalies: [] });
       return { signals };
     },
-    getSessionHistory: async (sessionId: string) => {
+    getSessionHistory: async () => {
       const history = await audit.getSessionHistory(sessionId);
       return history.map((h) => ({ band: h.band, attackTypes: h.attackTypes as AttackType[] }));
     },
