@@ -17,6 +17,10 @@ build/
 # testing / eval artefacts
 coverage/
 eval-reports/
+test-results/
+playwright-report/
+blob-report/
+playwright/.cache/
 
 # logs
 *.log
