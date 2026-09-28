@@ -22,3 +22,4 @@ export type { ModelRole } from "./factory.js";
 
 export * from "./investigator/index.js";
 export * from "./escalation/index.js";
+export * from "./protected-agent/index.js";

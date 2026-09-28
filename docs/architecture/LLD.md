@@ -245,8 +245,8 @@ The seeded inbox holds 6–8 synthetic emails: legitimate ones plus attack email
 | G2 | Arguments match the tool's parameter schema | BLOCK |
 | G3 | Destination allowlist (e.g. recipient domain in allowed set) | REQUIRE_APPROVAL |
 | G4 | Outbound secret scan: args contain any value from the fake-secrets registry, or key/token-shaped strings | BLOCK |
-| G5 | **Taint check:** a triggering content id had finalBand ≥ MEDIUM, or came from an untrusted source and the tool's risk class is high/critical | REQUIRE_APPROVAL (high) / BLOCK (critical) |
-| G6 | Per-session rate: > 3 high-risk calls in 5 min | REQUIRE_APPROVAL |
+| G5 | **Taint check** (only applies when the tool's risk class is high or critical — low-risk tools like `read_inbox`/`summarize` are never tainted): a triggering content id had finalBand ≥ MEDIUM, or came from an untrusted source | REQUIRE_APPROVAL (high) / BLOCK (critical) |
+| G6 | Per-session rate: at most 3 high-risk calls allowed in 5 min — the 4th trips this check | REQUIRE_APPROVAL |
 | — | All pass | EXECUTE (simulated) |
 
 ### 3.10 Session risk

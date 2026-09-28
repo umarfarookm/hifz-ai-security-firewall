@@ -118,3 +118,26 @@ export interface InvestigatorVerdict {
   stepsTaken: string[]; // Plan trace for the UI
   modelTag: string; // "provider:model"
 }
+
+export type GuardOutcome = "EXECUTE" | "BLOCK" | "REQUIRE_APPROVAL";
+
+export interface ToolCallRequest {
+  tool: string;
+  args: Record<string, unknown>;
+  sessionId: string;
+  /** Ids of the ContentEnvelope(s) that led to this proposed call — used by the taint check (G5). */
+  triggeringContentIds: string[];
+}
+
+export interface GuardCheckResult {
+  checkId: string;
+  passed: boolean;
+  detail: string;
+}
+
+export interface GuardDecision {
+  outcome: GuardOutcome;
+  checks: GuardCheckResult[];
+  reason: string;
+  reviewId: string | null;
+}
