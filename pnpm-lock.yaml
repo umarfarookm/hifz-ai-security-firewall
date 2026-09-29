@@ -143,6 +143,9 @@ importers:
       '@hifz/firewall-core':
         specifier: workspace:*
         version: link:../firewall-core
+      '@supabase/supabase-js':
+        specifier: ^2.45.4
+        version: 2.117.2
       zod:
         specifier: ^3.23.8
         version: 3.25.76
@@ -150,6 +153,9 @@ importers:
       '@types/node':
         specifier: ^22.9.0
         version: 22.20.4
+      dotenv:
+        specifier: ^16.4.5
+        version: 16.6.1
       tsx:
         specifier: ^4.19.2
         version: 4.23.15

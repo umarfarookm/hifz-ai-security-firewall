@@ -11,16 +11,19 @@
     "start": "tsx src/cli.ts",
     "generate-split": "tsx src/generate-split.ts",
     "measure-latency": "tsx src/measure-latency.ts",
-    "measure-llm-latency": "tsx src/measure-llm-latency.ts"
+    "measure-llm-latency": "tsx src/measure-llm-latency.ts",
+    "calibrate": "tsx src/calibrate.ts"
   },
   "dependencies": {
     "@hifz/agents": "workspace:*",
     "@hifz/config": "workspace:*",
     "@hifz/firewall-core": "workspace:*",
+    "@supabase/supabase-js": "^2.45.4",
     "zod": "^3.23.8"
   },
   "devDependencies": {
     "@types/node": "^22.9.0",
+    "dotenv": "^16.4.5",
     "tsx": "^4.19.2",
     "typescript": "^5.7.2"
   }
