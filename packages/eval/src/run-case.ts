@@ -6,6 +6,7 @@ import {
   runPolicy,
   scoreRisk,
   type ContentType,
+  type LlmStatus,
   type PolicyAction,
   type RiskBand,
   type TrustLevel,
@@ -59,6 +60,7 @@ export interface CaseOutcome {
   action: PolicyAction;
   band: RiskBand;
   latencyMs: number;
+  llmStatus: LlmStatus;
 }
 
 /**
@@ -112,5 +114,5 @@ export async function runCase(evalCase: EvalCase, deps: RunCaseDeps): Promise<Ca
 
   const latencyMs = Number(process.hrtime.bigint() - start) / 1_000_000;
 
-  return { action: policy.action, band: escalation.finalBand, latencyMs };
+  return { action: policy.action, band: escalation.finalBand, latencyMs, llmStatus: escalation.llmStatus };
 }

@@ -93,6 +93,7 @@ export async function runEval(options: RunEvalOptions): Promise<RunEvalResult> {
       actualAction: outcome.action,
       actualBand: outcome.band,
       latencyMs: outcome.latencyMs,
+      llmStatus: outcome.llmStatus,
       correct: isCorrect(c.category, outcome.action),
     });
   }
