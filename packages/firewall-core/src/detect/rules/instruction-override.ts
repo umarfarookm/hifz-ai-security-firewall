@@ -36,4 +36,22 @@ export const INSTRUCTION_OVERRIDE_RULES: RegexDetectorRule[] = [
     pattern: /\b(?:override|replace)\s+(?:your|the|all)\s+(?:previous\s+)?instructions\b|\byour\s+new\s+task\s+is\s+to\b/gi,
     notes: '"override/replace your/the instructions", "your new task is to"',
   },
+  {
+    id: "OVR-005",
+    attackType: "instruction_override",
+    severity: "high",
+    confidence: 0.8,
+    pattern:
+      /\b(?:ignore|disregard|forget|bypass)\s+(?:all\s+)?your\s+(?!(?:previous|prior|above|earlier)\b)(?:\w+\s+)?(?:guidelines|directions|rules|instructions|restrictions|programming|constraints)\b/gi,
+    notes: '"ignore/disregard/bypass your guidelines/directions/rules/restrictions" — possessive form; deliberately excludes previous/prior/above/earlier, which OVR-001 owns (avoids double-counting one phrase)',
+  },
+  {
+    id: "OVR-006",
+    attackType: "instruction_override",
+    severity: "high",
+    confidence: 0.75,
+    pattern:
+      /\bforget\s+(?:about\s+)?(?:all\s+)?(?:the\s+)?(?:previous|prior|above|earlier)\s+(?:information|context|conversation)\b|\bforget\s+(?:everything|all)\s+(?:that\s+)?(?:i|you|we)(?:'ve|\s+have)?\s+(?:told|said|discussed)\b/gi,
+    notes: '"forget about all the previous information", "forget everything I have told you" — context-wipe framing',
+  },
 ];

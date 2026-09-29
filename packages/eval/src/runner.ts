@@ -74,7 +74,7 @@ export async function runEval(options: RunEvalOptions): Promise<RunEvalResult> {
         gateway,
         escalationBand: { min: env.LLM_ESCALATION_BAND_MIN, max: env.LLM_ESCALATION_BAND_MAX },
         failureMode: env.LLM_FAILURE_MODE,
-        detectorVersion: "detectors-v1",
+        detectorVersion: "detectors-v2",
         investigatorTimeoutMs: env.LLM_TIMEOUT_MS,
         investigatorTemperature: env.LLM_TEMPERATURE,
         investigatorMaxRetries: env.LLM_MAX_RETRIES,

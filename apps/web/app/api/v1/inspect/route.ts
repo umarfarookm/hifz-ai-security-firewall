@@ -20,7 +20,7 @@ export async function POST(req: Request) {
     gateway: getGateway("investigator"),
     escalationBand: { min: env.LLM_ESCALATION_BAND_MIN, max: env.LLM_ESCALATION_BAND_MAX },
     failureMode: env.LLM_FAILURE_MODE,
-    detectorVersion: "detectors-v1",
+    detectorVersion: "detectors-v2",
     sessionRiskDecayMinutes: env.SESSION_RISK_DECAY_MINUTES,
     investigatorTimeoutMs: env.LLM_TIMEOUT_MS,
     investigatorTemperature: env.LLM_TEMPERATURE,

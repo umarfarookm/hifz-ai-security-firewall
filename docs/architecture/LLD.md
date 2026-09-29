@@ -146,13 +146,13 @@ Detectors run on visible text, every hidden segment, and every decoded layer. Ev
 
 | Attack type | Detector IDs (initial) | Examples of what they match |
 |---|---|---|
-| Instruction Override | OVR-001…004 | "ignore/disregard/forget (all) previous/above instructions", "new instructions:", fake system/end-of-prompt markers |
+| Instruction Override | OVR-001…006 | "ignore/disregard/forget (all) previous/above instructions", "new instructions:", fake system/end-of-prompt markers |
 | Role Change | ROL-001…003 | "you are now…", "act as…" plus unrestricted/developer/DAN framings, "from now on respond as" |
-| Secret Extraction | SEC-001…003 | "reveal/print/repeat your system prompt / instructions / hidden rules", requests for configuration |
-| Tool Abuse | TOL-001…003 (content, **primary**); Action Guard is second line | Text instructing tool invocation: "send an email to…", "call the function…", "forward all messages to…" |
-| Credential Theft | CRD-001…003 (content, **primary**) | Requests for passwords, API keys, tokens, "verify your credentials"; Action Guard G4 scans outbound args as second line |
+| Secret Extraction | SEC-001…007 | "reveal/print/repeat your system prompt / instructions / hidden rules", requests for configuration |
+| Tool Abuse | TOL-001…007 (content, **primary**); Action Guard is second line | Text instructing tool invocation: "send an email to…", "call the function…", "forward all messages to…" |
+| Credential Theft | CRD-001…005 (content, **primary**) | Requests for passwords, API keys, tokens, "verify your credentials"; Action Guard G4 scans outbound args as second line |
 | Encoded Instructions | ENC-001 + any detector firing on a decoded layer | Decoded layer containing instruction patterns → severity raised one level |
-| Indirect Injection | IND-001…002 | Imperatives addressed to an AI/assistant inside untrusted sources; any detector firing on a hidden segment |
+| Indirect Injection | IND-001…004 | Imperatives addressed to an AI/assistant inside untrusted sources; any detector firing on a hidden segment |
 
 ### 3.4 Risk scorer [DECISION — initial formula; every constant calibrated on the tuning split only and documented]
 
