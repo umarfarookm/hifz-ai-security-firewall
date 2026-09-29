@@ -12,7 +12,7 @@ scorer itself) and `pnpm eval --mode rules_only --split tuning`.
 
 ## CAL-1 — First calibration of `RISK_THRESHOLD_MEDIUM/HIGH/CRITICAL` (task 2.11)
 
-**Dataset:** 166 tuning-split cases (108 attack, 58 legitimate) from dataset v1 (task 2.5).
+**Dataset:** 166 tuning-split cases (112 attack, 54 legitimate) from dataset v1 (task 2.5).
 **Date:** 2026-09-29. **Git SHA:** see the eval_runs row this baseline was recorded under.
 
 **Method:** for every tuning-split case, ran ingest → normalize → detect → score (rules only,
@@ -27,10 +27,10 @@ detectors' severity/confidence weights (`SEVERITY_BASE`, per-detector `confidenc
 `packages/firewall-core/src/detect/rules/*.ts`) produce scores that are either 0 (no signal) or
 comfortably ≥ 30.
 
-**Finding 2 — the real gap is detector coverage, not thresholds.** 39 of 108 attack cases (36%)
+**Finding 2 — the real gap is detector coverage, not thresholds.** 39 of 112 attack cases (35%)
 scored 0 — no detector matched at all, so no threshold value can affect them. Breakdown:
 
-| Category | Zero-signal cases (of 108 total attack cases) |
+| Category | Zero-signal cases (of 112 total attack cases) |
 |---|---|
 | indirect_prompt_injection | 11 |
 | secret_extraction | 9 |
@@ -47,15 +47,15 @@ patterns per attack type), not for `2.11`'s scope. Tracked as a follow-up, not f
 
 | MEDIUM | Detection rate | FP rate |
 |---|---|---|
-| 15 | 63.9% | 0.0% |
-| 20 | 63.9% | 0.0% |
-| 25 | 63.9% | 0.0% |
-| **30 (current)** | **63.9%** | **0.0%** |
-| 35 | 62.0% | 0.0% |
-| 40 | 62.0% | 0.0% |
+| 15 | 65.2% | 0.0% |
+| 20 | 65.2% | 0.0% |
+| 25 | 65.2% | 0.0% |
+| **30 (current)** | **65.2%** | **0.0%** |
+| 35 | 63.4% | 0.0% |
+| 40 | 63.4% | 0.0% |
 
 Lowering `MEDIUM` all the way to 15 changes nothing (no case lives in that range). Raising it to
-35 loses ~2 points of detection with no FP benefit (FP rate is already 0% at every candidate — no
+35 loses ~2 points of detection (2 cases) with no FP benefit (FP rate is already 0% at every candidate — no
 legitimate tuning-split case scores above 0 in a way threshold movement would touch either).
 
 **Decision [DECISION]:** keep `RISK_THRESHOLD_MEDIUM/HIGH/CRITICAL` at their current defaults
@@ -64,16 +64,16 @@ only costs detection — 30 is already the best point in the tested range. This 
 calibration pass (verified against real data, decision recorded), not a skipped one — "the
 defaults already hold" is a legitimate outcome, not the absence of one.
 
-**Before/after:** before = after (63.9% detection / 0.0% FP on the tuning split) — no code change,
+**Before/after:** before = after (65.2% detection / 0.0% FP on the tuning split) — no code change,
 because none was justified by the data. If detector coverage improves in a future dataset
 iteration, re-run `pnpm --filter @hifz/eval run calibrate` — the near-miss and sensitivity numbers
 may look different once more attack phrasing patterns actually produce non-zero signals.
 
 **Baseline recorded:** `pnpm eval --mode rules_only --split tuning` — overall detection rate
-65.2%*, FP rate 0.0%, precision 100.0%, recall 65.2%. (*Slightly above the 63.9% figure in this
-log: the eval runner's detection rate counts any non-ALLOW action including SANITIZE/REVIEW paths
-influenced by the fail-safe/escalation logic, not raw rules-only score-vs-threshold like this
-calibration pass does — the two numbers measure related but not identical things, which is why
-this log computes its own score-only sensitivity table instead of reusing the eval summary
-directly.) Full JSON report and `eval_runs`/`eval_results` DB rows from that run are the
-"before" baseline for any future calibration pass.
+65.2% (73/112), FP rate 0.0%, precision 100.0%, recall 65.2%. This matches the score-only
+sensitivity table at MEDIUM=30 exactly.
+
+**Correction (same day):** an earlier draft of this entry reported 63.9% for the calibration pass
+and explained the gap to the eval runner's 65.2% as a fail-safe/escalation effect. That was wrong.
+`calibrate.ts` was silently skipping async-ingest (PDF) cases, so it scored 108 attack cases instead
+of 112. It now awaits every adapter and prints how many cases it scored; both tools agree.

@@ -42,7 +42,9 @@ export async function writeEvalRunToDb(
 
   const { error: resultsError } = await client.from("eval_results").insert(rows);
   if (resultsError) {
-    throw new Error(`failed to write eval_results rows: ${resultsError.message}`);
+    // Don't leave a summary-only run behind — GET /metrics reads the latest eval_runs row.
+    await client.from("eval_runs").delete().eq("id", run.id);
+    throw new Error(`failed to write eval_results rows (run rolled back): ${resultsError.message}`);
   }
 
   return run.id as string;

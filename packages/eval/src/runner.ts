@@ -25,6 +25,8 @@ export interface RunEvalResult {
   summary: EvalSummary;
   results: CaseResult[];
   reportPath: string;
+  /** Cases that threw (e.g. no ingest adapter, unparseable PDF). Excluded from the metrics, not silently dropped. */
+  caseErrors: Array<{ caseId: string; message: string }>;
   dbRunId: string | null;
   dbWarning: string | null;
 }
@@ -59,21 +61,28 @@ export async function runEval(options: RunEvalOptions): Promise<RunEvalResult> {
 
   const startedAt = new Date().toISOString();
   const results: CaseResult[] = [];
+  const caseErrors: RunEvalResult["caseErrors"] = [];
 
   // Sequential, not parallel: rules_llm mode makes real API calls per case
   // inside the escalation band, and this is a local/CI tool, not a
   // production hot path — no reason to risk bursting a free-tier rate limit.
   for (const c of inSplit) {
-    const outcome = await runCase(c, {
-      mode: options.mode,
-      gateway,
-      escalationBand: { min: env.LLM_ESCALATION_BAND_MIN, max: env.LLM_ESCALATION_BAND_MAX },
-      failureMode: env.LLM_FAILURE_MODE,
-      detectorVersion: "detectors-v1",
-      investigatorTimeoutMs: env.LLM_TIMEOUT_MS,
-      investigatorTemperature: env.LLM_TEMPERATURE,
-      investigatorMaxRetries: env.LLM_MAX_RETRIES,
-    });
+    let outcome;
+    try {
+      outcome = await runCase(c, {
+        mode: options.mode,
+        gateway,
+        escalationBand: { min: env.LLM_ESCALATION_BAND_MIN, max: env.LLM_ESCALATION_BAND_MAX },
+        failureMode: env.LLM_FAILURE_MODE,
+        detectorVersion: "detectors-v1",
+        investigatorTimeoutMs: env.LLM_TIMEOUT_MS,
+        investigatorTemperature: env.LLM_TEMPERATURE,
+        investigatorMaxRetries: env.LLM_MAX_RETRIES,
+      });
+    } catch (err) {
+      caseErrors.push({ caseId: c.caseId, message: err instanceof Error ? err.message : String(err) });
+      continue;
+    }
 
     results.push({
       caseId: c.caseId,
@@ -118,5 +127,5 @@ export async function runEval(options: RunEvalOptions): Promise<RunEvalResult> {
     }
   }
 
-  return { summary, results, reportPath, dbRunId, dbWarning };
+  return { summary, results, reportPath, caseErrors, dbRunId, dbWarning };
 }

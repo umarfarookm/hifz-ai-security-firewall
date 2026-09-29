@@ -49,6 +49,11 @@ async function main(): Promise<void> {
   const result = await runEval({ mode, split, datasetsDir, reportsDir, skipDb });
 
   printSummaryTable(result.summary);
+  if (result.caseErrors.length > 0) {
+    console.warn(`\n[hifz-eval] ${result.caseErrors.length} case(s) errored and are excluded from the metrics above:`);
+    for (const e of result.caseErrors) console.warn(`  ${e.caseId}: ${e.message}`);
+    process.exitCode = 1;
+  }
   console.log(`\nReport written to ${result.reportPath}`);
 
   if (result.dbWarning) {

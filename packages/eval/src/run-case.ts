@@ -16,7 +16,7 @@ import type { EvalCase } from "./types.js";
 export type EvalMode = "rules_only" | "rules_llm";
 
 // Trust defaults per docs/architecture/LLD.md §2.1 — same rule apps/web/lib/inspect.ts applies.
-function trustFor(source: EvalCase["source"]): TrustLevel {
+export function trustFor(source: EvalCase["source"]): TrustLevel {
   return source === "user_message" ? "semi_trusted" : "untrusted";
 }
 

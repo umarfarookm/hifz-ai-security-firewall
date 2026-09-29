@@ -20,13 +20,10 @@
  *
  * Usage: pnpm --filter @hifz/eval run calibrate
  */
-import { ingestAdapters, normalize, runDetectors, scoreRisk, DEFAULT_THRESHOLDS, type ContentType, type RiskBand, type TrustLevel } from "@hifz/firewall-core";
+import { ingestAdapters, normalize, runDetectors, scoreRisk, DEFAULT_THRESHOLDS, type ContentType, type RiskBand } from "@hifz/firewall-core";
 import { loadDataset } from "./loader.js";
+import { trustFor } from "./run-case.js";
 import { computeSplit } from "./split.js";
-
-function trustFor(source: string): TrustLevel {
-  return source === "user_message" ? "semi_trusted" : "untrusted";
-}
 
 function bandFor(score: number, medium: number, high: number, critical: number): RiskBand {
   if (score >= critical) return "CRITICAL";
@@ -42,7 +39,7 @@ interface ScoredCase {
   hasSignal: boolean;
 }
 
-function main(): void {
+async function main(): Promise<void> {
   const datasetsDir = new URL("../../../datasets", import.meta.url).pathname;
   const { cases, errors } = loadDataset(datasetsDir);
   if (errors.length > 0) {
@@ -56,13 +53,14 @@ function main(): void {
 
   for (const c of tuning) {
     const adapter = ingestAdapters[c.contentType as ContentType];
-    if (!adapter) continue;
-    const ingested = adapter(c.content);
-    if (ingested instanceof Promise) continue; // pdf — keep this analysis pure-CPU/sync, same call as measure-latency.ts
+    if (!adapter) throw new Error(`no ingest adapter for contentType "${c.contentType}" (case ${c.caseId})`);
+    const ingested = await adapter(c.content);
     const signals = runDetectors(normalize(ingested));
     const { score } = scoreRisk({ signals, sourceTrust: trustFor(c.source), sessionRisk: 0 });
     scored.push({ caseId: c.caseId, category: c.category, score, hasSignal: signals.length > 0 });
   }
+
+  console.log(`Scored ${scored.length} of ${tuning.length} tuning-split cases.`);
 
   const attacks = scored.filter((s) => s.category !== "legitimate");
   const legitimate = scored.filter((s) => s.category === "legitimate");
@@ -99,4 +97,7 @@ function main(): void {
   }
 }
 
-main();
+main().catch((err) => {
+  console.error(err instanceof Error ? err.message : String(err));
+  process.exitCode = 1;
+});
