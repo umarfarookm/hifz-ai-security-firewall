@@ -11,9 +11,11 @@
   },
   "dependencies": {
     "@hifz/config": "workspace:*",
-    "node-html-parser": "^6.1.13"
+    "node-html-parser": "^6.1.13",
+    "pdf-parse": "1"
   },
   "devDependencies": {
+    "@types/pdf-parse": "1",
     "typescript": "^5.7.2"
   }
 }

@@ -100,9 +100,9 @@ export async function runInspection(rawBody: unknown, deps: RunInspectionDeps): 
   }
 
   const timings: Record<string, number> = {};
-  const timeStage = <T>(name: string, fn: () => T): T => {
+  const timeStage = async <T>(name: string, fn: () => T | Promise<T>): Promise<T> => {
     const start = process.hrtime.bigint();
-    const result = fn();
+    const result = await fn();
     timings[name] = Number(process.hrtime.bigint() - start) / 1_000_000;
     return result;
   };
@@ -118,10 +118,10 @@ export async function runInspection(rawBody: unknown, deps: RunInspectionDeps): 
 
     const priorSession = await deps.audit.getSessionState(sessionId, deps.sessionRiskDecayMinutes);
 
-    const ingested = timeStage("ingest", () => adapter(body.content));
-    const normalized = timeStage("normalize", () => normalize(ingested));
-    const signals = timeStage("detect", () => runDetectors(normalized));
-    const riskAssessment = timeStage("score", () => scoreRisk({ signals, sourceTrust: trust, sessionRisk: priorSession.risk }));
+    const ingested = await timeStage("ingest", () => adapter(body.content));
+    const normalized = await timeStage("normalize", () => normalize(ingested));
+    const signals = await timeStage("detect", () => runDetectors(normalized));
+    const riskAssessment = await timeStage("score", () => scoreRisk({ signals, sourceTrust: trust, sessionRisk: priorSession.risk }));
     const attackTypes = [...new Set(signals.map((s) => s.attackType))];
 
     const escalationStart = process.hrtime.bigint();
