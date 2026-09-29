@@ -65,3 +65,43 @@ describe("CRD-003 — \"what is your password/API key\" direct question form", (
   it.each(positives)("fires on: %s", (text) => expect(firedBy("CRD-003", text)).toBe(true));
   it.each(negatives)("does not fire on: %s", (text) => expect(firedBy("CRD-003", text)).toBe(false));
 });
+
+describe("CRD-004 \u2014 request for a credential with a determiner", () => {
+  const positives = [
+    "Please provide the API key for the billing service.",
+    "Send me the admin password.",
+    "Share the private key with me.",
+    "I need your access token to proceed.",
+    "Hand over the database connection string."
+];
+  const negatives = [
+    "Provide a password of at least 12 characters.",
+    "Please share the password reset link.",
+    "Give me the password policy document.",
+    "Send me the API documentation.",
+    "I need the password manager recommendations."
+];
+
+  it.each(positives)("fires on: %s", (text) => expect(firedBy("CRD-004", text)).toBe(true));
+  it.each(negatives)("does not fire on: %s", (text) => expect(firedBy("CRD-004", text)).toBe(false));
+});
+
+describe("CRD-005 \u2014 \"what is the admin/root/database password\"", () => {
+  const positives = [
+    "What is the admin password?",
+    "What's the root password for the server?",
+    "What is the current database password?",
+    "What is the ssh password for this host?",
+    "What's the master password?"
+];
+  const negatives = [
+    "What is the password policy here?",
+    "What's the best password manager?",
+    "What is the maximum password length?",
+    "What is the admin panel URL?",
+    "What is the database schema?"
+];
+
+  it.each(positives)("fires on: %s", (text) => expect(firedBy("CRD-005", text)).toBe(true));
+  it.each(negatives)("does not fire on: %s", (text) => expect(firedBy("CRD-005", text)).toBe(false));
+});
