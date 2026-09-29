@@ -5,6 +5,7 @@ import {
   normalize,
   recursivelyDecode,
   runDetectors,
+  runPolicy,
   scoreRisk,
   type AttackType,
   type ContentType,
@@ -20,7 +21,6 @@ import {
 import type { InvestigatorTools, ModelGateway, VerdictCache } from "@hifz/agents";
 import { runEscalation } from "@hifz/agents";
 import type { AuditWriter } from "./audit.js";
-import { decideStubPolicy } from "./policy-stub.js";
 
 const MAX_INPUT_BYTES = 100 * 1024;
 
@@ -100,9 +100,9 @@ export async function runInspection(rawBody: unknown, deps: RunInspectionDeps): 
   }
 
   const timings: Record<string, number> = {};
-  const timeStage = <T>(name: string, fn: () => T): T => {
+  const timeStage = async <T>(name: string, fn: () => T | Promise<T>): Promise<T> => {
     const start = process.hrtime.bigint();
-    const result = fn();
+    const result = await fn();
     timings[name] = Number(process.hrtime.bigint() - start) / 1_000_000;
     return result;
   };
@@ -118,10 +118,10 @@ export async function runInspection(rawBody: unknown, deps: RunInspectionDeps): 
 
     const priorSession = await deps.audit.getSessionState(sessionId, deps.sessionRiskDecayMinutes);
 
-    const ingested = timeStage("ingest", () => adapter(body.content));
-    const normalized = timeStage("normalize", () => normalize(ingested));
-    const signals = timeStage("detect", () => runDetectors(normalized));
-    const riskAssessment = timeStage("score", () => scoreRisk({ signals, sourceTrust: trust, sessionRisk: priorSession.risk }));
+    const ingested = await timeStage("ingest", () => adapter(body.content));
+    const normalized = await timeStage("normalize", () => normalize(ingested));
+    const signals = await timeStage("detect", () => runDetectors(normalized));
+    const riskAssessment = await timeStage("score", () => scoreRisk({ signals, sourceTrust: trust, sessionRisk: priorSession.risk }));
     const attackTypes = [...new Set(signals.map((s) => s.attackType))];
 
     const escalationStart = process.hrtime.bigint();
@@ -142,10 +142,12 @@ export async function runInspection(rawBody: unknown, deps: RunInspectionDeps): 
     });
     timings.investigate = Number(process.hrtime.bigint() - escalationStart) / 1_000_000;
 
-    const policy = decideStubPolicy({
+    const policy = runPolicy({
       finalBand: escalation.finalBand,
-      trust,
+      sourceTrust: trust,
       failSafeAction: escalation.failSafeAction,
+      normalized,
+      signals,
     });
 
     const contentHash = createHash("sha256").update(body.content).digest("hex");
@@ -167,7 +169,7 @@ export async function runInspection(rawBody: unknown, deps: RunInspectionDeps): 
         action: policy.action,
         policyRuleId: policy.policyRuleId,
         reason: policy.reason,
-        sanitizedContent: null,
+        sanitizedContent: policy.sanitizedContent,
         finalBand: escalation.finalBand,
         llmStatus: escalation.llmStatus,
       },
@@ -197,7 +199,7 @@ export async function runInspection(rawBody: unknown, deps: RunInspectionDeps): 
         score: riskAssessment.score,
         attackTypes,
         reason: policy.reason,
-        sanitizedContent: null,
+        sanitizedContent: policy.sanitizedContent,
         eventId: inspectionId,
         llmStatus: escalation.llmStatus,
         timings,

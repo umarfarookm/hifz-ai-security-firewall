@@ -51,7 +51,10 @@ function main(): void {
   // One warm-up pass so JIT warm-up doesn't skew the first few real timings.
   for (const c of cases) {
     const adapter = ingestAdapters[c.contentType as ContentType];
-    if (adapter) runDetectors(normalize(adapter(c.content)));
+    if (!adapter) continue;
+    const ingested = adapter(c.content);
+    if (ingested instanceof Promise) continue; // pdf — see the skip below, same reasoning
+    runDetectors(normalize(ingested));
   }
 
   const perStageDurations = {
@@ -73,7 +76,15 @@ function main(): void {
     const totalStart = process.hrtime.bigint();
 
     const ingestStart = process.hrtime.bigint();
-    const ingested = adapter(c.content);
+    const ingestedOrPromise = adapter(c.content);
+    if (ingestedOrPromise instanceof Promise) {
+      // pdf's real async parse (pdf-parse) isn't pure CPU — measuring it
+      // here would contradict this script's own "Pure CPU, no I/O" claim
+      // (docs/measurements.md). Skip it the same as a missing adapter.
+      skipped++;
+      continue;
+    }
+    const ingested = ingestedOrPromise;
     const ingestEnd = process.hrtime.bigint();
 
     const normalizeStart = process.hrtime.bigint();
@@ -98,7 +109,7 @@ function main(): void {
     perStageDurations.total.push(ns(totalStart, totalEnd));
   }
 
-  console.log(`(${skipped} case(s) skipped — no ingest adapter yet for their contentType, e.g. pdf/source_code/docx)\n`);
+  console.log(`(${skipped} case(s) skipped — no ingest adapter for their contentType (e.g. docx), or an async one (pdf) that isn't pure CPU)\n`);
   summarize("ingest      ", perStageDurations.ingest);
   summarize("normalize   ", perStageDurations.normalize);
   summarize("detect      ", perStageDurations.detect);

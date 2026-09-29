@@ -3,10 +3,9 @@ import { runInspection } from "../../../../lib/inspect.js";
 import { getAuditWriter, getEnv, getGateway, getVerdictCache, parseJsonBody, rateLimitOrNull } from "../../../../lib/api-helpers.js";
 
 /**
- * POST /api/v1/inspect — docs/architecture/LLD.md §4.
- * The policy decision here is a temporary stub (apps/web/lib/policy-stub.ts)
- * pending task 2.3's real policy engine — everything else in this route is
- * the real pipeline (ingest → normalize → detect → score → escalate → audit).
+ * POST /api/v1/inspect — docs/architecture/LLD.md §4. Runs the full
+ * pipeline: ingest → normalize → detect → score → escalate → policy
+ * (incl. sanitization for POL-005) → audit.
  */
 export async function POST(req: Request) {
   const env = getEnv();

@@ -47,7 +47,7 @@ async function main(): Promise<void> {
 
   for (const c of sample) {
     const adapter = ingestAdapters[c.contentType as ContentType];
-    const signals = adapter ? runDetectors(normalize(adapter(c.content))) : [];
+    const signals = adapter ? runDetectors(normalize(await adapter(c.content))) : [];
 
     const start = Date.now();
     let status = "error";
