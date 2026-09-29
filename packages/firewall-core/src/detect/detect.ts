@@ -2,11 +2,52 @@ import type { NormalizedContent, Signal, Span } from "../types.js";
 import { foldHomoglyphsOnly } from "../normalize/homoglyph.js";
 import { INSTRUCTION_OVERRIDE_RULES } from "./rules/instruction-override.js";
 import { ROLE_CHANGE_RULES } from "./rules/role-change.js";
+import { SECRET_EXTRACTION_RULES } from "./rules/secret-extraction.js";
+import { TOOL_ABUSE_RULES } from "./rules/tool-abuse.js";
+import { CREDENTIAL_THEFT_RULES } from "./rules/credential-theft.js";
+import { INDIRECT_INJECTION_RULES } from "./rules/indirect-injection.js";
 import { detectDecodeLimitAnomalies, detectEncodedInstructions } from "./rules/encoded-instructions.js";
 import { escalateSeverity } from "./severity.js";
 import type { RegexDetectorRule } from "./types.js";
 
-const REGEX_RULES: RegexDetectorRule[] = [...INSTRUCTION_OVERRIDE_RULES, ...ROLE_CHANGE_RULES];
+const REGEX_RULES: RegexDetectorRule[] = [
+  ...INSTRUCTION_OVERRIDE_RULES,
+  ...ROLE_CHANGE_RULES,
+  ...SECRET_EXTRACTION_RULES,
+  ...TOOL_ABUSE_RULES,
+  ...CREDENTIAL_THEFT_RULES,
+  ...INDIRECT_INJECTION_RULES,
+];
+
+const IND_002_SEVERITY = "medium" as const;
+const IND_002_CONFIDENCE = 0.6;
+
+/**
+ * IND-002 (docs/architecture/LLD.md §3.3: "any detector firing on a hidden
+ * segment" counts toward Indirect Injection coverage). Any signal already
+ * found on a hidden segment — regardless of its own attackType — is itself
+ * evidence of indirect injection: untrusted content trying to reach the
+ * agent through a channel the user never sees. Skips signals that are
+ * already indirect_prompt_injection to avoid a signal spawning a near-
+ * duplicate of itself.
+ */
+function detectIndirectInjectionFromHiddenSignals(signals: Signal[]): Signal[] {
+  return signals
+    .filter((s) => s.attackType !== "indirect_prompt_injection")
+    .flatMap((s) => {
+      const hiddenEvidence = s.evidence.filter((span) => span.layer === "hidden");
+      if (hiddenEvidence.length === 0) return [];
+      return [
+        {
+          detectorId: "IND-002",
+          attackType: "indirect_prompt_injection" as const,
+          severity: IND_002_SEVERITY,
+          confidence: IND_002_CONFIDENCE,
+          evidence: hiddenEvidence,
+        },
+      ];
+    });
+}
 
 const EXCERPT_MAX_LENGTH = 200;
 
@@ -49,11 +90,13 @@ function runRuleOnLayer(rule: RegexDetectorRule, layer: LayerText): Signal | nul
 
 /**
  * Stage ③ Detect (docs/architecture/LLD.md §3.3). Runs every pattern-based
- * rule against every layer — visible text, each hidden segment, each
- * decoded layer — plus the standalone encoded-instructions (ENC-001) and
- * decode-limit-anomaly (ENC-002) checks. A rule that matches inside a
- * decoded layer has its severity raised one level (§3.3, "any detector
- * firing on a decoded layer").
+ * rule (instruction override, role change, secret extraction, tool abuse,
+ * credential theft, indirect injection) against every layer — visible
+ * text, each hidden segment, each decoded layer — plus the standalone
+ * encoded-instructions (ENC-001), decode-limit-anomaly (ENC-002), and
+ * hidden-segment (IND-002) checks. A rule that matches inside a decoded
+ * layer has its severity raised one level (§3.3, "any detector firing on
+ * a decoded layer").
  */
 export function runDetectors(normalized: NormalizedContent): Signal[] {
   const layers = collectLayers(normalized);
@@ -68,6 +111,7 @@ export function runDetectors(normalized: NormalizedContent): Signal[] {
 
   signals.push(...detectEncodedInstructions(normalized));
   signals.push(...detectDecodeLimitAnomalies(normalized));
+  signals.push(...detectIndirectInjectionFromHiddenSignals(signals));
 
   return signals;
 }
