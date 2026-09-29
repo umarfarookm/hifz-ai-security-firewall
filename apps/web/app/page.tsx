@@ -11,6 +11,16 @@ const SCREENS = [
     title: "Agent demo",
     description: "HIFZ Mail, a protected email assistant. Watch the Action Guard intercept every tool call it proposes, in real time.",
   },
+  {
+    href: "/scenarios",
+    title: "Scenarios",
+    description: "One scripted attack per committed type. Replay any of them, or all seven, through the live pipeline.",
+  },
+  {
+    href: "/evaluation",
+    title: "Evaluation",
+    description: "Detection and false-positive rates from the dataset runner, rules-only against rules + LLM, read from recorded runs.",
+  },
 ];
 
 export default function HomePage() {

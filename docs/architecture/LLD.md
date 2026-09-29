@@ -278,8 +278,8 @@ Every transition is an audit event with reviewer id and comment.
 | GET `/events/{id}` | Full evidence: signals, contributions, verdict, guard checks | Public read | Per IP |
 | GET `/reviews` | Pending review items | Reviewer | — |
 | POST `/reviews/{id}/decision` | Approve / reject with comment | Reviewer | — |
-| GET `/metrics` | Live counters + latest held-out eval summary | Public | Per IP |
-| GET `/scenarios` · POST `/scenarios/{id}/replay` | Pre-built demo scenarios; replay returns stored results | Public | Per IP |
+| GET `/metrics` | Live counters (inspection totals by band and action) + the latest eval run per split (`heldout`, `tuning`) and mode (`rules_only`, `rules_llm`); `null` where no run exists | Public | Per IP |
+| GET `/scenarios` · POST `/scenarios/{id}/replay` | Pre-built demo scenarios, one per committed attack type; replay re-runs the scenario through the live `/inspect` pipeline (same rate-limit bucket, real audit event) **[DECISION — live replay instead of stored results, so every number shown is a real run and no extra table is needed]** | Public | Per IP |
 | GET `/health` | App, DB, and LLM provider status | Public | — |
 
 **POST /inspect — request:** `content`, `contentType`, `source`, `origin?`, `sessionId?`

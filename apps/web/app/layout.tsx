@@ -15,6 +15,8 @@ export const metadata: Metadata = {
 const NAV_LINKS = [
   { href: "/playground", label: "Playground" },
   { href: "/agent", label: "Agent demo" },
+  { href: "/scenarios", label: "Scenarios" },
+  { href: "/evaluation", label: "Evaluation" },
 ];
 
 function Mark() {
