@@ -11,6 +11,7 @@ function result(overrides: Partial<CaseResult>): CaseResult {
     actualAction: "BLOCK",
     actualBand: "HIGH",
     latencyMs: 10,
+    llmStatus: "not_called",
     correct: true,
     ...overrides,
   };
@@ -97,5 +98,17 @@ describe("computeMetrics", () => {
     const category = summary.categories.find((c) => c.category === "instruction_override")!;
     expect(category.detectionRate).toBe(1); // both flagged
     expect(category.bandMet).toBe(1); // only the CRITICAL one met the HIGH bar
+  });
+});
+
+describe("computeMetrics — llmStatusCounts", () => {
+  it("counts cases per investigator status so LLM failures are visible in the summary", () => {
+    const summary = computeMetrics("rules_llm", "heldout", [
+      result({ llmStatus: "not_called" }),
+      result({ llmStatus: "ok" }),
+      result({ llmStatus: "ok" }),
+      result({ llmStatus: "unavailable" }),
+    ]);
+    expect(summary.llmStatusCounts).toEqual({ not_called: 1, ok: 2, unavailable: 1 });
   });
 });

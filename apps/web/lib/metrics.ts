@@ -25,6 +25,8 @@ const evalSummarySchema = z.object({
   precision: z.number(),
   recall: z.number(),
   latency: z.object({ n: z.number(), p50: z.number(), p95: z.number(), mean: z.number() }),
+  // Absent on runs recorded before the eval tracked it.
+  llmStatusCounts: z.record(z.number()).optional(),
 });
 
 export type EvalSummaryView = z.infer<typeof evalSummarySchema>;

@@ -97,6 +97,18 @@ function SplitSection({ title, note, runs }: { title: string; note: string; runs
                 </td>
               ))}
             </tr>
+            <tr className="border-b border-line">
+              <td className="px-4 py-2.5 font-sans text-ink-dim">LLM calls that failed safe</td>
+              {MODES.map((m) => {
+                const counts = runs[m.key]?.summary.llmStatusCounts;
+                const failed = counts ? (counts.unavailable ?? 0) + (counts.invalid_output ?? 0) : null;
+                return (
+                  <td key={m.key} className="px-4 py-2.5">
+                    {m.key === "rules_only" || failed === null ? "—" : failed}
+                  </td>
+                );
+              })}
+            </tr>
             <tr className="border-b border-line text-[11px] text-ink-faint">
               <td className="px-4 py-2.5 font-sans">Run</td>
               {MODES.map((m) => (

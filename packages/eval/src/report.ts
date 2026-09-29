@@ -41,6 +41,11 @@ export function printSummaryTable(summary: EvalSummary): void {
   console.log(`\nOverall detection rate:     ${pct(summary.overallDetectionRate)}`);
   console.log(`Overall false-positive rate: ${pct(summary.overallFalsePositiveRate)}`);
   console.log(`Precision: ${pct(summary.precision)}   Recall: ${pct(summary.recall)}`);
+  const statuses = Object.entries(summary.llmStatusCounts).map(([k, v]) => `${k}=${v}`).join(" ");
+  console.log(`Investigator status: ${statuses}`);
+  if ((summary.llmStatusCounts.unavailable ?? 0) + (summary.llmStatusCounts.invalid_output ?? 0) > 0) {
+    console.warn("WARNING: some cases hit an LLM failure and failed safe to REVIEW — not a clean rules+LLM measurement.");
+  }
   console.log(
     `Latency (n=${summary.latency.n}): p50=${summary.latency.p50.toFixed(1)}ms p95=${summary.latency.p95.toFixed(1)}ms mean=${summary.latency.mean.toFixed(1)}ms`,
   );

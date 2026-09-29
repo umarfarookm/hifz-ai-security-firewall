@@ -1,4 +1,4 @@
-import type { PolicyAction, RiskBand } from "@hifz/firewall-core";
+import type { LlmStatus, PolicyAction, RiskBand } from "@hifz/firewall-core";
 import { bandAtLeast } from "@hifz/firewall-core";
 
 export interface CaseResult {
@@ -10,6 +10,8 @@ export interface CaseResult {
   actualAction: PolicyAction;
   actualBand: RiskBand;
   latencyMs: number;
+  /** What the investigator stage did for this case — "not_called" unless the score landed in the escalation band. */
+  llmStatus: LlmStatus;
   /**
    * docs/architecture/LLD.md §7 defines "detection rate" and "false-positive
    * rate" directly off the ALLOW/non-ALLOW bucket, not an exact
@@ -55,6 +57,18 @@ export interface EvalSummary {
   precision: number;
   recall: number;
   latency: LatencyStats;
+  /**
+   * Cases per investigator status. In rules_llm mode, "unavailable"/"invalid_output" cases fail safe to
+   * REVIEW, which counts as "detected" (or a false positive) without the LLM having weighed in — so a run
+   * with a non-zero count here is not a clean measurement of rules + LLM.
+   */
+  llmStatusCounts: Record<string, number>;
+}
+
+function countBy<T>(items: T[], key: (item: T) => string): Record<string, number> {
+  const counts: Record<string, number> = {};
+  for (const item of items) counts[key(item)] = (counts[key(item)] ?? 0) + 1;
+  return counts;
 }
 
 function percentile(sorted: number[], p: number): number {
@@ -115,5 +129,6 @@ export function computeMetrics(mode: "rules_only" | "rules_llm", split: "tuning"
     precision,
     recall,
     latency: computeLatencyStats(results),
+    llmStatusCounts: countBy(results, (r) => r.llmStatus),
   };
 }
