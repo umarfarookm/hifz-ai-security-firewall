@@ -20,6 +20,21 @@ const nextConfig = {
     config.resolve.extensionAlias = {
       ".js": [".ts", ".tsx", ".js"],
     };
+    // pdfjs-dist (the pdf ingest adapter) optionally requires `canvas` for
+    // rendering-only DOMMatrix/Path2D polyfills it never actually needs
+    // for text extraction. `canvas`'s native binary isn't built in every
+    // environment, and webpack tries to statically bundle the require()
+    // regardless of the try/catch pdfjs-dist wraps it in — a hard build
+    // failure ("Module not found: Can't resolve '.../canvas.node'"), not
+    // the graceful runtime warning plain Node produces for the same
+    // require(). `serverExternalPackages` doesn't reach this (firewall-core
+    // is transpiled, and its dependency's dependency isn't excluded by
+    // it) — aliasing straight to `false` is webpack's own standard fix for
+    // this exact "optional native canvas dependency" problem.
+    config.resolve.alias = {
+      ...config.resolve.alias,
+      canvas: false,
+    };
     return config;
   },
 };
