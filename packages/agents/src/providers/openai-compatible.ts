@@ -31,6 +31,13 @@ export interface OpenAiCompatibleConfig {
   apiKey: string;
   model: string;
   baseURL?: string;
+  /**
+   * Extra top-level fields merged into every chat-completions request body, for provider-specific
+   * parameters the OpenAI SDK's types don't know about (e.g. DeepSeek's `thinking`).
+   */
+  extraBody?: Record<string, unknown>;
+  /** Injected for tests; defaults to a real OpenAI client built from apiKey/baseURL. */
+  client?: OpenAI;
 }
 
 /**
@@ -41,10 +48,12 @@ export interface OpenAiCompatibleConfig {
 export class OpenAiCompatibleGateway implements ModelGateway {
   readonly metadata: ModelGatewayMetadata;
   private readonly client: OpenAI;
+  private readonly extraBody: Record<string, unknown>;
 
   constructor(config: OpenAiCompatibleConfig) {
     this.metadata = { provider: config.provider, model: config.model };
-    this.client = new OpenAI({ apiKey: config.apiKey, baseURL: config.baseURL });
+    this.client = config.client ?? new OpenAI({ apiKey: config.apiKey, baseURL: config.baseURL });
+    this.extraBody = config.extraBody ?? {};
   }
 
   async generateStructured<T>(request: StructuredOutputRequest<T>): Promise<StructuredOutputResult<T>> {
@@ -59,7 +68,8 @@ export class OpenAiCompatibleGateway implements ModelGateway {
           { role: "system", content: `${request.system}\n\nRespond with a single JSON object only — no prose, no markdown fences.` },
           { role: "user", content: request.prompt },
         ],
-      },
+        ...this.extraBody,
+      } as OpenAI.Chat.ChatCompletionCreateParamsNonStreaming,
       request.timeoutMs === undefined ? undefined : { timeout: request.timeoutMs },
     );
 
@@ -101,7 +111,8 @@ export class OpenAiCompatibleGateway implements ModelGateway {
         tools: toOpenAiTools(request.tools),
         tool_choice: "required",
         messages,
-      },
+        ...this.extraBody,
+      } as OpenAI.Chat.ChatCompletionCreateParamsNonStreaming,
       request.timeoutMs === undefined ? undefined : { timeout: request.timeoutMs },
     );
 

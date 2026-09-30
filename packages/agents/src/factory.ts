@@ -47,8 +47,11 @@ export function createModelGateway(role: ModelRole, env: Env): ModelGateway {
       return createOpenAiCompatibleGateway({
         provider: "deepseek",
         apiKey: requireKey(env.DEEPSEEK_API_KEY, "DEEPSEEK_API_KEY"),
-        baseURL: "https://api.deepseek.com/v1",
+        baseURL: "https://api.deepseek.com",
         model,
+        // DeepSeek's current models think by default, and in thinking mode `tool_choice: "required"` (which the
+        // investigator's tool loop sends) is rejected with a 400; temperature is also ignored there. Turn it off.
+        extraBody: { thinking: { type: "disabled" } },
       });
     case "ollama":
       // Ollama's local server doesn't check the key — any non-empty string works.
