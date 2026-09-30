@@ -86,7 +86,7 @@ hifz-ai-security-firewall/
 | attackTypes | enum[] | |
 | band | band enum | Merged with escalate-only rule |
 | rationale | string | ≤ 500 chars, shown in evidence view |
-| evidence | Span[] | Must reference offsets that exist in the input; otherwise rejected |
+| evidence | Span[] | Offsets are re-anchored by locating each span's excerpt in the input; spans that cannot be located are dropped, and the verdict is kept **[DECISION — models miscount characters; a correct verdict is not discarded over a highlight offset]** |
 | stepsTaken | string[] | Plan trace for the UI |
 | modelTag | string | `provider:model` |
 
@@ -199,7 +199,7 @@ Implemented in `packages/firewall-core/src/scorer.ts` with unit tests covering e
 
 **Output handling:**
 
-- Validate against the verdict schema. Reject if evidence offsets don't exist in the input.
+- Validate against the verdict schema; reject on any schema violation. Evidence offsets are repaired rather than enforced: each span is re-anchored to the nearest occurrence of its excerpt in the input, and a span whose excerpt cannot be found is dropped (a decoded/hidden-layer span is kept only if its offsets are in range). Offsets only drive UI highlighting, so this does not affect the band, and the LLM still cannot lower it.
 - Invalid → one retry → still invalid → `llmStatus = invalid_output`, action REVIEW.
 - **Merge:** `finalBand = max(ruleBand, verdict.band)`.
 
