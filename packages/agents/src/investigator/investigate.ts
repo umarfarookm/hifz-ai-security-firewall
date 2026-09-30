@@ -90,7 +90,7 @@ export async function investigate(gateway: ModelGateway, request: InvestigateReq
             toolCallId: submitCall.id,
             name: "submit_verdict",
             resultJson: JSON.stringify({
-              error: "Invalid verdict — check that all required fields are present and evidence offsets fall within the content you were given, then call submit_verdict again.",
+              error: "Invalid verdict — check that all required fields are present and have the right types, then call submit_verdict again.",
             }),
           });
           continue;
@@ -143,11 +143,48 @@ function parseVerdict(argsJson: string, content: string): LlmVerdict | null {
   const result = llmVerdictSchema.safeParse(parsed);
   if (!result.success) return null;
 
-  for (const span of result.data.evidence) {
-    if (span.start < 0 || span.end > content.length || span.start > span.end) return null;
+  return { ...result.data, evidence: repairEvidence(result.data.evidence, content) };
+}
+
+/**
+ * Models are unreliable at counting characters: a correct verdict often arrives with evidence offsets that
+ * are off by a few positions or run past the end. The offsets only drive UI highlighting, so rather than
+ * discard a sound verdict, re-anchor each span by locating its excerpt in the content (nearest occurrence to
+ * the claimed start), and drop only the spans that cannot be located. Nothing here loosens what the verdict
+ * is allowed to do — the schema check above is unchanged and the band can still only be raised.
+ */
+function repairEvidence(spans: LlmVerdict["evidence"], content: string): LlmVerdict["evidence"] {
+  const repaired: LlmVerdict["evidence"] = [];
+
+  for (const span of spans) {
+    const inRange = span.start >= 0 && span.start <= span.end && span.end <= content.length;
+    if (inRange && content.slice(span.start, span.end) === span.excerpt) {
+      repaired.push(span);
+      continue;
+    }
+
+    const at = nearestOccurrence(content, span.excerpt, span.start);
+    if (at !== -1) {
+      repaired.push({ ...span, start: at, end: at + span.excerpt.length });
+      continue;
+    }
+
+    // Decoded/hidden-layer text is not part of `content`, so its excerpt can't be located here; keep the span
+    // only if its offsets are at least sane.
+    if (inRange && span.layer !== "visible") repaired.push(span);
   }
 
-  return result.data;
+  return repaired;
+}
+
+/** Index of the occurrence of `needle` in `haystack` closest to `near`, or -1 if there is none. */
+function nearestOccurrence(haystack: string, needle: string, near: number): number {
+  if (needle.length === 0) return -1;
+  let best = -1;
+  for (let at = haystack.indexOf(needle); at !== -1; at = haystack.indexOf(needle, at + 1)) {
+    if (best === -1 || Math.abs(at - near) < Math.abs(best - near)) best = at;
+  }
+  return best;
 }
 
 async function executeTool(call: RequestedToolCall, tools: InvestigatorTools): Promise<unknown> {
