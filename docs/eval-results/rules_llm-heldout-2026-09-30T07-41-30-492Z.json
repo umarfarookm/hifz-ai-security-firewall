@@ -1,0 +1,84 @@
+{
+  "summary": {
+    "mode": "rules_llm",
+    "split": "heldout",
+    "totalCases": 109,
+    "categories": [
+      {
+        "category": "credential_theft",
+        "total": 7,
+        "detectionRate": 0.8571428571428571,
+        "falsePositiveRate": null,
+        "bandMet": 6
+      },
+      {
+        "category": "encoded_instructions",
+        "total": 15,
+        "detectionRate": 0.9333333333333333,
+        "falsePositiveRate": null,
+        "bandMet": 14
+      },
+      {
+        "category": "indirect_prompt_injection",
+        "total": 6,
+        "detectionRate": 0.8333333333333334,
+        "falsePositiveRate": null,
+        "bandMet": 3
+      },
+      {
+        "category": "instruction_override",
+        "total": 12,
+        "detectionRate": 0.75,
+        "falsePositiveRate": null,
+        "bandMet": 9
+      },
+      {
+        "category": "legitimate",
+        "total": 46,
+        "detectionRate": null,
+        "falsePositiveRate": 0,
+        "bandMet": 46
+      },
+      {
+        "category": "role_change",
+        "total": 9,
+        "detectionRate": 0.5555555555555556,
+        "falsePositiveRate": null,
+        "bandMet": 5
+      },
+      {
+        "category": "secret_extraction",
+        "total": 9,
+        "detectionRate": 0.7777777777777778,
+        "falsePositiveRate": null,
+        "bandMet": 7
+      },
+      {
+        "category": "tool_abuse",
+        "total": 5,
+        "detectionRate": 0.8,
+        "falsePositiveRate": null,
+        "bandMet": 4
+      }
+    ],
+    "overallFalsePositiveRate": 0,
+    "overallDetectionRate": 0.7936507936507936,
+    "precision": 1,
+    "recall": 0.7936507936507936,
+    "latency": {
+      "n": 109,
+      "p50": 0.252106,
+      "p95": 5229.201352,
+      "mean": 1620.6198443761468
+    },
+    "llmStatusCounts": {
+      "not_called": 80,
+      "ok": 28,
+      "unavailable": 1
+    }
+  },
+  "gitSha": "0a390d67502ecec3be5be58f133fed8c42b74e23",
+  "modelTag": "gemini-flash-lite-latest",
+  "startedAt": "2026-09-30T07:38:33.839Z",
+  "finishedAt": "2026-09-30T07:41:30.492Z"
+}
