@@ -1,6 +1,6 @@
 import { execSync } from "node:child_process";
 import { loadEnv, type Env } from "@hifz/config";
-import { createModelGateway, type ModelGateway } from "@hifz/agents";
+import { createModelGateway } from "@hifz/agents";
 import { loadDataset } from "./loader.js";
 import { computeSplit, type SplitAssignment } from "./split.js";
 import { runCase, type EvalMode } from "./run-case.js";
@@ -8,6 +8,7 @@ import { computeMetrics, isCorrect, type CaseResult, type EvalSummary } from "./
 import { writeJsonReport, type EvalReport } from "./report.js";
 import { createServerSupabaseClient } from "./supabase-client.js";
 import { writeEvalRunToDb } from "./write-db.js";
+import { ThrottledGateway } from "./throttled-gateway.js";
 import type { EvalCase } from "./types.js";
 
 export interface RunEvalOptions {
@@ -19,6 +20,8 @@ export interface RunEvalOptions {
   skipDb?: boolean;
   /** Injected for tests; defaults to process.env via @hifz/config. */
   env?: Env;
+  /** Minimum gap between model requests in rules_llm mode; keeps a free-tier key under its requests-per-minute cap. */
+  llmMinIntervalMs?: number;
 }
 
 export interface RunEvalResult {
@@ -27,6 +30,8 @@ export interface RunEvalResult {
   reportPath: string;
   /** Cases that threw (e.g. no ingest adapter, unparseable PDF). Excluded from the metrics, not silently dropped. */
   caseErrors: Array<{ caseId: string; message: string }>;
+  /** Model-request failure message → count (rules_llm only). Explains any "unavailable" investigator status. */
+  llmFailures: Record<string, number>;
   dbRunId: string | null;
   dbWarning: string | null;
 }
@@ -39,10 +44,13 @@ function gitSha(): string {
   }
 }
 
-function getGatewayFor(mode: EvalMode, env: Env): ModelGateway | null {
+// 12 requests/minute — under Gemini's free-tier 15 RPM cap with headroom.
+const DEFAULT_LLM_MIN_INTERVAL_MS = 5_000;
+
+function getGatewayFor(mode: EvalMode, env: Env, minIntervalMs: number): ThrottledGateway | null {
   if (mode === "rules_only") return null;
   const gateway = createModelGateway("investigator", env);
-  return gateway.metadata.provider === "none" ? null : gateway;
+  return gateway.metadata.provider === "none" ? null : new ThrottledGateway(gateway, minIntervalMs);
 }
 
 export async function runEval(options: RunEvalOptions): Promise<RunEvalResult> {
@@ -57,7 +65,7 @@ export async function runEval(options: RunEvalOptions): Promise<RunEvalResult> {
   }
 
   const env = options.env ?? loadEnv();
-  const gateway = getGatewayFor(options.mode, env);
+  const gateway = getGatewayFor(options.mode, env, options.llmMinIntervalMs ?? DEFAULT_LLM_MIN_INTERVAL_MS);
 
   const startedAt = new Date().toISOString();
   const results: CaseResult[] = [];
@@ -128,5 +136,5 @@ export async function runEval(options: RunEvalOptions): Promise<RunEvalResult> {
     }
   }
 
-  return { summary, results, reportPath, caseErrors, dbRunId, dbWarning };
+  return { summary, results, reportPath, caseErrors, llmFailures: Object.fromEntries(gateway?.failures ?? []), dbRunId, dbWarning };
 }

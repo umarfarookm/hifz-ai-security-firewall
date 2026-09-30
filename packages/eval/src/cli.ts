@@ -5,7 +5,7 @@
  * report, and prints a per-category summary table.
  * See docs/architecture/LLD.md §7 and docs/PLAN.md task 2.4.
  *
- * Usage: pnpm eval --mode rules_only|rules_llm --split tuning|heldout [--skip-db]
+ * Usage: pnpm eval --mode rules_only|rules_llm --split tuning|heldout [--skip-db] [--llm-min-interval-ms N]
  */
 import { config } from "dotenv";
 import { runEval } from "./runner.js";
@@ -42,13 +42,19 @@ async function main(): Promise<void> {
   const mode = parseMode();
   const split = parseSplit();
   const skipDb = process.argv.includes("--skip-db");
+  const llmMinIntervalMs = argValue("--llm-min-interval-ms");
 
   const datasetsDir = new URL("../../../datasets", import.meta.url).pathname;
   const reportsDir = new URL("../../../eval-reports", import.meta.url).pathname;
 
-  const result = await runEval({ mode, split, datasetsDir, reportsDir, skipDb });
+  const result = await runEval({ mode, split, datasetsDir, reportsDir, skipDb, ...(llmMinIntervalMs ? { llmMinIntervalMs: Number(llmMinIntervalMs) } : {}) });
 
   printSummaryTable(result.summary);
+  const failureEntries = Object.entries(result.llmFailures);
+  if (failureEntries.length > 0) {
+    console.warn(`\n[hifz-eval] model request failures (explains any "unavailable" investigator status):`);
+    for (const [message, count] of failureEntries) console.warn(`  ${count}x ${message}`);
+  }
   if (result.caseErrors.length > 0) {
     console.warn(`\n[hifz-eval] ${result.caseErrors.length} case(s) errored and are excluded from the metrics above:`);
     for (const e of result.caseErrors) console.warn(`  ${e.caseId}: ${e.message}`);

@@ -1,0 +1,82 @@
+{
+  "summary": {
+    "mode": "rules_only",
+    "split": "heldout",
+    "totalCases": 109,
+    "categories": [
+      {
+        "category": "credential_theft",
+        "total": 7,
+        "detectionRate": 0.8571428571428571,
+        "falsePositiveRate": null,
+        "bandMet": 4
+      },
+      {
+        "category": "encoded_instructions",
+        "total": 15,
+        "detectionRate": 0.9333333333333333,
+        "falsePositiveRate": null,
+        "bandMet": 13
+      },
+      {
+        "category": "indirect_prompt_injection",
+        "total": 6,
+        "detectionRate": 0.8333333333333334,
+        "falsePositiveRate": null,
+        "bandMet": 2
+      },
+      {
+        "category": "instruction_override",
+        "total": 12,
+        "detectionRate": 0.75,
+        "falsePositiveRate": null,
+        "bandMet": 8
+      },
+      {
+        "category": "legitimate",
+        "total": 46,
+        "detectionRate": null,
+        "falsePositiveRate": 0,
+        "bandMet": 46
+      },
+      {
+        "category": "role_change",
+        "total": 9,
+        "detectionRate": 0.5555555555555556,
+        "falsePositiveRate": null,
+        "bandMet": 3
+      },
+      {
+        "category": "secret_extraction",
+        "total": 9,
+        "detectionRate": 0.7777777777777778,
+        "falsePositiveRate": null,
+        "bandMet": 4
+      },
+      {
+        "category": "tool_abuse",
+        "total": 5,
+        "detectionRate": 0.8,
+        "falsePositiveRate": null,
+        "bandMet": 3
+      }
+    ],
+    "overallFalsePositiveRate": 0,
+    "overallDetectionRate": 0.7936507936507936,
+    "precision": 1,
+    "recall": 0.7936507936507936,
+    "latency": {
+      "n": 109,
+      "p50": 0.072603,
+      "p95": 2.928927,
+      "mean": 4.3800219357798165
+    },
+    "llmStatusCounts": {
+      "not_called": 109
+    }
+  },
+  "gitSha": "432f58cc94faf554c241c333c2aba15b7b9d2027",
+  "modelTag": null,
+  "startedAt": "2026-09-30T07:25:24.347Z",
+  "finishedAt": "2026-09-30T07:25:24.826Z"
+}
