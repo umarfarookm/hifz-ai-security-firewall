@@ -1,8 +1,9 @@
 import { randomUUID } from "node:crypto";
 import { NextResponse } from "next/server";
-import { createModelGateway, type ModelGateway, type ModelRole, type VerdictCache } from "@hifz/agents";
+import type { ModelGateway, ModelRole, VerdictCache } from "@hifz/agents";
 import { loadEnv, type Env } from "@hifz/config";
 import { createServerSupabaseClient } from "./supabase-server.js";
+import { resolveGateway } from "./gateway.js";
 import { SupabaseAuditWriter, type AuditWriter } from "./audit.js";
 import { checkRateLimit } from "./rate-limit.js";
 import { SupabaseVerdictCache } from "./verdict-cache.js";
@@ -19,8 +20,9 @@ export function getAuditWriter(): AuditWriter {
   return cachedAudit;
 }
 
+/** Never throws on a config error — see resolveGateway. A misconfigured role gets the "none" (rules-only) gateway. */
 export function getGateway(role: ModelRole): ModelGateway {
-  return createModelGateway(role, getEnv());
+  return resolveGateway(role, getEnv()).gateway;
 }
 
 let cachedVerdictCache: SupabaseVerdictCache | null = null;
