@@ -178,6 +178,7 @@ Implemented in `packages/firewall-core/src/scorer.ts` with unit tests covering e
 | 20 ≤ score < 70 | Investigator, then policy |
 | score ≥ 70 | Policy directly (no LLM needed to block) |
 | Investigator provider = `none` | Policy with `llmStatus = not_called`; escalation-band cases treated per `LLM_FAILURE_MODE` |
+| Investigator provider misconfigured (missing API key or model id) | Treated as `none` **[DECISION — a config error must degrade to the fail-safe path, never a 5xx; found when a missing key in production made every `/inspect` return 500]**; logged once per role and shown by `GET /health` as `misconfigured`. `POST /agent/run` returns 503 with a pointer to `/health` |
 
 ### 3.6 Investigator agent
 
@@ -280,7 +281,7 @@ Every transition is an audit event with reviewer id and comment.
 | POST `/reviews/{id}/decision` | Approve / reject with comment | Reviewer | — |
 | GET `/metrics` | Live counters (inspection totals by band and action) + the latest eval run per split (`heldout`, `tuning`) and mode (`rules_only`, `rules_llm`); `null` where no run exists | Public | Per IP |
 | GET `/scenarios` · POST `/scenarios/{id}/replay` | Pre-built demo scenarios, one per committed attack type; replay re-runs the scenario through the live `/inspect` pipeline (same rate-limit bucket, real audit event) **[DECISION — live replay instead of stored results, so every number shown is a real run and no extra table is needed]** | Public | Per IP |
-| GET `/health` | App, DB, and LLM provider status | Public | — |
+| GET `/health` | App, DB, and per-role LLM status (`ok` / `rules_only` / `misconfigured`); overall `status` is `degraded` if the DB is down or a role is misconfigured. Reports status only — the reason goes to the server log | Public | — |
 
 **POST /inspect — request:** `content`, `contentType`, `source`, `origin?`, `sessionId?`
 **Response:** `decision`, `finalBand`, `score`, `attackTypes[]`, `reason`, `sanitizedContent?`, `eventId`, `llmStatus`, `timings{}`, `contributions[]`, `signals[]`, `verdict?` — the last three added in task 2.10 so the Playground can render its score breakdown and evidence highlights from a single call, instead of a second round trip to `/events/{id}`.

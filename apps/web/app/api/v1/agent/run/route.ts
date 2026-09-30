@@ -34,7 +34,7 @@ export async function POST(req: Request) {
       return NextResponse.json({ correlationId: outcome.correlationId, error: "invalid input", issues: outcome.issues }, { status: 400 });
     case "llm_unavailable":
       return NextResponse.json(
-        { correlationId: outcome.correlationId, error: "DEMO_AGENT_PROVIDER is 'none' — set a real provider in .env.local to try this" },
+        { correlationId: outcome.correlationId, error: "the demo agent's LLM is unavailable (DEMO_AGENT_PROVIDER is 'none' or its key/model is misconfigured) — see GET /api/v1/health" },
         { status: 503 },
       );
     case "pipeline_error":

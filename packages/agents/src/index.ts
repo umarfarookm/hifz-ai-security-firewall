@@ -18,6 +18,7 @@ export type {
 } from "./tool-types.js";
 
 export { createModelGateway, ModelGatewayConfigError } from "./factory.js";
+export { NoneGateway } from "./providers/none.js";
 export type { ModelRole } from "./factory.js";
 
 export * from "./investigator/index.js";
