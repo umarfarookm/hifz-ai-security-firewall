@@ -119,12 +119,32 @@ export interface ToolCallRecord {
   sessionId: string;
   tool: string;
   argsRedacted: Record<string, unknown>;
+  /** Real `inspections.id` UUIDs of the content that triggered this call (a POST /inspect-originated event). */
   triggeringInspectionIds: string[];
+  /**
+   * Ids of triggering content that has no inspection row — e.g. seeded-inbox emails ("inbox-004"), which the
+   * agent scores in memory. The `tool_calls` table has no column for these (`triggering_inspection_ids` is
+   * `uuid[]`), so they are persisted inside `args_redacted` under {@link CONTENT_IDS_KEY}.
+   */
+  triggeringContentIds: string[];
   outcome: GuardDecision["outcome"];
   checks: GuardDecision["checks"];
 }
 
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+/** Reserved key inside `tool_calls.args_redacted` holding triggering-content ids that are not inspection UUIDs. */
+export const CONTENT_IDS_KEY = "_triggeringContentIds";
+
+/**
+ * Splits ids into what `tool_calls.triggering_inspection_ids` (uuid[]) can hold and what it cannot. Anything
+ * that is not a UUID is kept as a content id instead of reaching Postgres, which would reject the whole row.
+ */
+export function partitionTriggeringIds(inspectionIds: string[], contentIds: string[]): { uuids: string[]; contentIds: string[] } {
+  const uuids = inspectionIds.filter((id) => UUID_PATTERN.test(id));
+  const rest = inspectionIds.filter((id) => !UUID_PATTERN.test(id));
+  return { uuids, contentIds: [...new Set([...contentIds, ...rest])] };
+}
 
 export class SupabaseAuditWriter implements AuditWriter {
   constructor(private readonly client: SupabaseClient) {}
@@ -193,13 +213,14 @@ export class SupabaseAuditWriter implements AuditWriter {
   }
 
   async writeToolCall(record: ToolCallRecord): Promise<string> {
+    const { uuids, contentIds } = partitionTriggeringIds(record.triggeringInspectionIds, record.triggeringContentIds);
     const { data, error } = await this.client
       .from("tool_calls")
       .insert({
         session_id: record.sessionId,
         tool: record.tool,
-        args_redacted: record.argsRedacted,
-        triggering_inspection_ids: record.triggeringInspectionIds,
+        args_redacted: contentIds.length > 0 ? { ...record.argsRedacted, [CONTENT_IDS_KEY]: contentIds } : record.argsRedacted,
+        triggering_inspection_ids: uuids,
         outcome: record.outcome,
         checks: record.checks,
       })
@@ -454,6 +475,10 @@ export class InMemoryAuditWriter implements AuditWriter {
   }
 
   async writeToolCall(record: ToolCallRecord): Promise<string> {
+    // Mirror the database: `triggering_inspection_ids` is uuid[], so a non-UUID makes Postgres reject the row.
+    // Without this the in-memory double accepted anything, and a real-DB-only failure shipped to production.
+    const bad = record.triggeringInspectionIds.find((v) => !UUID_PATTERN.test(v));
+    if (bad !== undefined) throw new Error(`writeToolCall failed: invalid input syntax for type uuid: "${bad}"`);
     const id = randomUUID();
     this.toolCalls.push({ ...record, id, createdAt: new Date() });
     return id;

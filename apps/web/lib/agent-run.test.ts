@@ -104,7 +104,10 @@ describe("runAgentRun", () => {
     await runAgentRun({ instruction: "read the inbox then check secrets" }, baseDeps({ gateway, audit }));
 
     const secretsCall = audit.toolCalls.find((c) => c.tool === "read_secrets");
-    expect(secretsCall?.triggeringInspectionIds.length).toBeGreaterThan(0);
+    // Seeded-inbox emails have no inspection row: they are content ids, never inspection UUIDs.
+    expect(secretsCall?.triggeringInspectionIds).toEqual([]);
+    expect(secretsCall?.triggeringContentIds.length).toBeGreaterThan(0);
+    expect(secretsCall?.triggeringContentIds.every((id) => id.startsWith("inbox-"))).toBe(true);
   });
 
   it("seeds G6 from prior tool_calls in the same session, across separate /agent/run calls", async () => {
@@ -118,6 +121,7 @@ describe("runAgentRun", () => {
         tool: "send_email",
         argsRedacted: {},
         triggeringInspectionIds: [],
+        triggeringContentIds: [],
         outcome: "EXECUTE",
         checks: [],
       });

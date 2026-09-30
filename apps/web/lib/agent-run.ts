@@ -84,11 +84,11 @@ export async function runAgentRun(rawBody: unknown, deps: RunAgentDeps): Promise
         sessionId,
         tool: call.tool,
         argsRedacted: call.args,
-        // Seeded-inbox email ids (e.g. "inbox-004"), not real inspections.id
-        // UUIDs — read_inbox scores each email in-memory rather than writing
-        // a real inspection row per email, so GET /events/{id} won't resolve
-        // these. Kept for an accurate audit trail regardless.
-        triggeringInspectionIds: call.triggeringContentIds,
+        // No inspection rows exist for these calls: read_inbox scores each seeded email in memory. The
+        // triggering emails are recorded as content ids ("inbox-004"), which the audit writer stores in
+        // args_redacted — they are not inspections.id UUIDs, so they must never go into the uuid[] column.
+        triggeringInspectionIds: [],
+        triggeringContentIds: call.triggeringContentIds,
         outcome: call.guardOutcome,
         checks: call.checks,
       });
