@@ -13,7 +13,7 @@ Plan: [`plan.md`](plan.md). Approved 2026-10-02. **All work on `feat/document-im
 ## Phase 2: DOCX adapter
 - [x] T3: Safe zip read + visible text (`fflate`, bomb fixtures)
 - [x] T4: Hidden-text sources (vanish, near-white, tiny, deleted, comments, footnotes)
-- [ ] T5: Real-file validation (**user:** save one Word file with hidden text)
+- [x] T5: Real-file validation (**user:** save one Word file with hidden text)
 - [x] T6: End-to-end through `/inspect`
 - [x] Checkpoint B: docx works through the real API locally
 
@@ -38,5 +38,5 @@ Plan: [`plan.md`](plan.md). Approved 2026-10-02. **All work on `feat/document-im
 - [x] Images: go, time-boxed behind T0
 - [x] Server-side `tesseract.js`, not an LLM extractor
 - [x] Grid claim stays F3 x D2 (Checkpoint D, ADR-13: image suite 47.6% rules-only, 36 images)
-- [ ] User: create a real Word `.docx` with hidden text (T5)
+- [x] User: created a real Word `.docx` with hidden text (T5), verified 2026-10-02
 - [x] `image` enum migration applied to dev (2026-10-02). **Still open:** apply to the demo project before any release

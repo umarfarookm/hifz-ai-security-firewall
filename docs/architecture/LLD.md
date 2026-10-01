@@ -487,7 +487,7 @@ None of the YAML files is read at runtime. They are hand-maintained documentatio
 - Image input is read by OCR, which misses some faint or heavy display-style text, and an image whose text cannot be read gives the firewall nothing to judge. The image suite is small (36 images); no D3 claim.
 - Rule detectors can be evaded by novel phrasing; the investigator reduces but does not eliminate this — measured rates are reported as-is.
 - Demo tools and secrets are simulated; approving a held action releases a simulated tool and does not resume the agent.
-- Word: hiding inherited from a style (rather than set on the run) is not seen, and text boxes are read as ordinary runs. The docx extractor was tested on generated files; **[ASSUMPTION]** it is not yet confirmed against a file saved by Word itself. PDF is text layer only, and a white-on-white PDF line is read as ordinary visible text.
+- Word: hiding inherited from a style (rather than set on the run) is not seen, and text boxes are read as ordinary runs. The docx extractor is tested on generated files and **[VERIFIED]** on one file saved by Word itself (`packages/firewall-core/src/ingest/fixtures/word-hidden.docx`, Font > Hidden on one paragraph); other Word versions and Pages are untested. PDF is text layer only, and a white-on-white PDF line is read as ordinary visible text.
 - Rate limiting is per serverless instance, not global.
 - The protected agent's 45 s / 6-call budget is a target the code does not enforce (§9).
 - The live demo model resists email injection on its own, so the guard is demonstrated with user-driven requests; the scripted tests cover a manipulated agent.
