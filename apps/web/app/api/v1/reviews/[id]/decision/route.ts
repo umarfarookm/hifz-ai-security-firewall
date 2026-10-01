@@ -1,3 +1,4 @@
+import { randomUUID } from "node:crypto";
 import { NextResponse } from "next/server";
 import { getEnv, getReviewStore, parseJsonBody, rateLimitOrNull } from "../../../../../../lib/api-helpers.js";
 import { createServerSupabaseClient } from "../../../../../../lib/supabase-server.js";
@@ -44,7 +45,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
     }
   } catch (err) {
     return NextResponse.json(
-      { error: "pipeline failure", message: err instanceof Error ? err.message : String(err) },
+      { correlationId: randomUUID(), error: "pipeline failure", message: err instanceof Error ? err.message : String(err) },
       { status: 503 },
     );
   }
