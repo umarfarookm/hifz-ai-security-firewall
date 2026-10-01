@@ -3,7 +3,7 @@
 Plan: [`plan.md`](plan.md). Approved 2026-10-02. **All work on `feat/document-image-inputs`; `main` is untouched until the user decides to merge.** Verify on the branch preview, not production. Internal target 2026-10-10.
 
 ## Phase 0: De-risk (first)
-- [~] T0: OCR-on-Vercel spike. Local production build passes (offline, 0.7 s cold). First preview failed on a symlink packaging error (fixed); re-verifying on the preview. **Gate for Phase 4**
+- [x] T0: OCR-on-Vercel spike. **PASSED on a Vercel preview (2026-10-02):** offline, no CDN, all 5 images read correctly (incl. low-contrast and rotated), worker ready 575 ms, 5 images 1.7 s total, 163 MB rss. Findings for T9: the Node worker ignores `corePath` and `require()`s the core, so the `.wasm` files must be traced from the real `.pnpm` directory; add an `errorHandler`. **Phase 4 gate: GO**
 
 ## Phase 1: Binary-input foundation
 - [ ] T1: Bad files return a clean 400 (`IngestError`)
