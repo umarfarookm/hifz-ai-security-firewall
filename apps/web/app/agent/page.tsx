@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Link from "next/link";
 import type { ToolCallLogEntry } from "@hifz/agents";
 import type { AgentRunResponseBody } from "../../lib/agent-run.js";
 import { GuardBadge } from "../../components/badges.js";
@@ -204,6 +205,11 @@ function ToolCallStep({ call }: { call: ToolCallLogEntry }) {
         <GuardBadge outcome={call.guardOutcome} />
       </div>
       <p className="mt-1 text-[12px] text-ink-faint">{call.guardReason}</p>
+      {call.guardOutcome === "REQUIRE_APPROVAL" && (
+        <Link href="/reviews" className="mt-1.5 inline-block text-[12px] text-accent hover:underline">
+          Held for approval: open the review queue →
+        </Link>
+      )}
       {call.checks.length > 0 && (
         <ul className="mt-2 space-y-0.5 text-[11px] text-ink-faint">
           {call.checks.map((check) => (

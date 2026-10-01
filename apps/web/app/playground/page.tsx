@@ -188,6 +188,11 @@ export default function PlaygroundPage() {
                   <Link href={`/events/${result.eventId}`} className="mt-1 inline-block text-accent hover:underline">
                     View full event →
                   </Link>
+                  {result.reviewId && (
+                    <Link href="/reviews" className="ml-3 mt-1 inline-block text-accent hover:underline">
+                      Open the review queue →
+                    </Link>
+                  )}
                 </div>
               </div>
 
