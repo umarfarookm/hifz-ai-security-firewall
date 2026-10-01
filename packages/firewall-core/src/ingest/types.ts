@@ -22,3 +22,14 @@ export type IngestAdapter = (raw: string) => IngestResult;
 export type MapIngestAdapter = (raw: string) => IngestResult | Promise<IngestResult>;
 
 export type IngestAdapterMap = Partial<Record<ContentType, MapIngestAdapter>>;
+
+/**
+ * Thrown by an adapter when the input is not a usable file of its declared type (corrupt, wrong format, over a
+ * safety limit). The API edge turns it into a 400 with `message`, so keep the message safe to show to a caller.
+ */
+export class IngestError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "IngestError";
+  }
+}

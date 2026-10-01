@@ -1,5 +1,5 @@
 import { createRequire } from "node:module";
-import type { MapIngestAdapter } from "./types.js";
+import { IngestError, type MapIngestAdapter } from "./types.js";
 
 /**
  * pdf adapter (docs/architecture/LLD.md §3.1, P1): text layer only, no
@@ -41,8 +41,30 @@ const pdfjsLib = require("pdfjs-dist/legacy/build/pdf.js") as typeof import("pdf
 // that works regardless of how the caller got bundled.
 pdfjsLib.GlobalWorkerOptions.workerSrc = require.resolve("pdfjs-dist/legacy/build/pdf.worker.js");
 
+/** Demo inputs are small by design (cost and latency): a longer document is rejected, not truncated. */
+export const MAX_PDF_PAGES = 5;
+const PDF_PARSE_TIMEOUT_MS = 10_000;
+
 export const ingestPdf: MapIngestAdapter = async (raw) => {
   const bytes = Buffer.from(raw, "base64");
+  if (bytes.subarray(0, 5).toString("latin1") !== "%PDF-") {
+    throw new IngestError("The file is not a PDF (missing the %PDF header).");
+  }
+  let timer: NodeJS.Timeout | undefined;
+  const timeout = new Promise<never>((_, reject) => {
+    timer = setTimeout(() => reject(new IngestError("The PDF took too long to read.")), PDF_PARSE_TIMEOUT_MS);
+  });
+  try {
+    return await Promise.race([extractText(bytes), timeout]);
+  } catch (err) {
+    if (err instanceof IngestError) throw err;
+    throw new IngestError("The PDF could not be read (it may be corrupt or encrypted).");
+  } finally {
+    clearTimeout(timer);
+  }
+};
+
+async function extractText(bytes: Buffer) {
   const doc = await pdfjsLib.getDocument({
     data: new Uint8Array(bytes),
     useWorkerFetch: false,
@@ -50,6 +72,9 @@ export const ingestPdf: MapIngestAdapter = async (raw) => {
     verbosity: 0, // only affects pdfjs's own console warnings (e.g. missing font-rendering assets we don't need for text extraction) — not extraction correctness
   }).promise;
   try {
+    if (doc.numPages > MAX_PDF_PAGES) {
+      throw new IngestError(`The PDF has ${doc.numPages} pages; the demo accepts at most ${MAX_PDF_PAGES}.`);
+    }
     const pageTexts: string[] = [];
     for (let pageNumber = 1; pageNumber <= doc.numPages; pageNumber++) {
       const page = await doc.getPage(pageNumber);
@@ -60,4 +85,4 @@ export const ingestPdf: MapIngestAdapter = async (raw) => {
   } finally {
     await doc.destroy();
   }
-};
+}

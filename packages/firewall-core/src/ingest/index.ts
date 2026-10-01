@@ -18,5 +18,6 @@ export const ingestAdapters: IngestAdapterMap = {
 };
 
 export { ingestText, ingestMarkdown, ingestHtml, ingestEmail, ingestJson, ingestSourceCode, ingestPdf };
+export { IngestError } from "./types.js";
 export type { IngestResult, IngestAdapter, MapIngestAdapter, IngestAdapterMap } from "./types.js";
 export type { RawEmail } from "./email.js";

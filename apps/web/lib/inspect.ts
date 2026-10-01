@@ -1,6 +1,7 @@
 import { createHash, randomUUID } from "node:crypto";
 import { z } from "zod";
 import {
+  IngestError,
   ingestAdapters,
   normalize,
   recursivelyDecode,
@@ -24,6 +25,12 @@ import type { ReviewStore } from "./review-store.js";
 import type { AuditWriter } from "./audit.js";
 
 const MAX_INPUT_BYTES = 100 * 1024;
+/**
+ * The investigator sees at most this many characters (about 1.5K tokens), whatever the input size, so LLM cost per
+ * call is bounded. The rule detectors still scan the whole text; only the model's view is truncated.
+ */
+export const MAX_INVESTIGATOR_CHARS = 6000;
+const BINARY_TYPES: ReadonlySet<string> = new Set(["pdf", "docx"]);
 
 const inspectRequestSchema = z.object({
   content: z.string().min(1),
@@ -136,7 +143,7 @@ export async function runInspection(rawBody: unknown, deps: RunInspectionDeps): 
       gateway: deps.gateway.metadata.provider === "none" ? null : deps.gateway,
       failureMode: deps.failureMode,
       investigatorRequest: {
-        content: normalized.visibleText,
+        content: normalized.visibleText.slice(0, MAX_INVESTIGATOR_CHARS),
         tools: buildInvestigatorTools(deps.audit, sessionId),
         detectorVersion: deps.detectorVersion,
         timeoutMs: deps.investigatorTimeoutMs,
@@ -156,7 +163,11 @@ export async function runInspection(rawBody: unknown, deps: RunInspectionDeps): 
     });
 
     const contentHash = createHash("sha256").update(body.content).digest("hex");
-    const contentExcerpt = body.content.length > 2000 ? body.content.slice(0, 2000) : body.content;
+    // A binary upload arrives as base64, which is unreadable in the event and review pages; store the text we read.
+    const excerptSource = BINARY_TYPES.has(body.contentType)
+      ? `[${body.contentType}, ${Math.max(1, Math.round((Buffer.byteLength(body.content, "utf8") * 3) / 4 / 1024))} KB] ${ingested.visibleText}`
+      : body.content;
+    const contentExcerpt = excerptSource.length > 2000 ? excerptSource.slice(0, 2000) : excerptSource;
 
     const inspectionId = await deps.audit.writeInspection({
       correlationId,
@@ -217,6 +228,7 @@ export async function runInspection(rawBody: unknown, deps: RunInspectionDeps): 
       },
     };
   } catch (err) {
+    if (err instanceof IngestError) return { kind: "validation_error", correlationId, issues: [err.message] };
     return { kind: "pipeline_error", correlationId, message: err instanceof Error ? err.message : String(err) };
   }
 }
