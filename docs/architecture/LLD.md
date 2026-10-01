@@ -2,7 +2,7 @@
 
 | Item | Value |
 |---|---|
-| Status | v1.0 — baseline for implementation |
+| Status | v1.1 — brought in line with the implementation on 2026-10-01 (PLAN 3.6); where the code and this document disagree, the code is stated and the gap is labelled |
 | Depends on | `HLD.md` (principles P1–P7, bands, ADRs in `decision-log.md`) |
 | Labels | **[DECISION]** our choice · **[ASSUMPTION]** to validate · **[VERIFIED]** checked during planning |
 
@@ -15,19 +15,19 @@ This document specifies contracts, data structures, algorithms, and flows. It is
 ```text
 hifz-ai-security-firewall/
 ├── packages/
-│   ├── config/          env validation, policy loading
+│   ├── config/          env validation (no policy loading: the rules are implemented in code)
 │   ├── firewall-core/   ingest, normalize, detect, score, policy   (no network, no framework)
 │   ├── agents/          llm providers, investigator, protected agent, action guard
 │   └── eval/             dataset loader, runner, metrics, report
 ├── apps/web/             Next.js: UI pages + /api/v1 route handlers
 ├── datasets/             attacks/<category>/, legitimate/, external/, splits/
-├── policies/             policy.yaml, detectors.yaml, tools.yaml
+├── policies/             policy.yaml, detectors.yaml, tools.yaml   (reference mirrors kept in sync by hand; not loaded at runtime)
 ├── supabase/migrations/  SQL migrations (source of truth for schema)
 ├── docs/architecture/    HLD.md, LLD.md
 └── .github/workflows/    ci.yml (lint, typecheck, test)
 ```
 
-**Import rules [DECISION]** (enforced by lint, see `eslint.config.js`): `firewall-core` imports only `config`; `agents` imports `core` + `config`; `web` and `eval` import `agents`. No package imports `web`.
+**Import rules [DECISION]** (enforced by lint, see `eslint.config.js`): `firewall-core` imports only `config`; `agents` imports `core` + `config`; `web` and `eval` import `agents` and `core`. No package imports `web`.
 
 ---
 
@@ -40,12 +40,14 @@ hifz-ai-security-firewall/
 | id | uuid | Generated at ingest |
 | correlationId | string | Propagated to every stage and audit row |
 | sessionId | string | Groups a conversation / agent run |
-| contentType | enum | `text` · `markdown` · `html` · `email` · `json` · `source_code` · `pdf` · `docx` (P2) |
+| contentType | enum | `text` · `markdown` · `html` · `email` · `json` · `source_code` · `pdf`. `docx` is a reserved enum value only: there is no adapter and `/inspect` answers 400 |
 | raw | string | Size-capped (see §9) |
 | provenance.source | enum | `user_message` · `web_page` · `email` · `api_response` · `document` · `tool_output` |
 | provenance.trust | enum | `trusted` · `semi_trusted` · `untrusted` |
 | provenance.origin | string | URL, sender address, or API name |
 | intendedUse | enum | `chat_input` · `agent_context` · `tool_result` |
+
+**As built:** `POST /inspect` does not take an envelope. It takes `{content, contentType, source, origin?, sessionId?}` and the server builds the provenance: trust comes from `source` (below), `correlationId` and the inspection id are generated, and `intendedUse` is reserved and not consumed anywhere. A `sessionId` that is not a UUID is replaced by a new session. The `ContentEnvelope` type exists in `types.ts` but nothing constructs one.
 
 **Trust defaults [DECISION]:** `user_message` = semi_trusted; `web_page`, `email`, `api_response`, `document`, `tool_output` = untrusted. Nothing external is ever `trusted` — that level is reserved for our own system prompt.
 
@@ -57,7 +59,7 @@ hifz-ai-security-firewall/
 | hiddenSegments | Segment[] | Text a human would not see (see §3.1) |
 | decodedLayers | DecodedLayer[] | Each: encoding, depth, text, source span |
 | transforms | string[] | Audit of applied steps, e.g. `nfkc`, `strip_zero_width:14` |
-| anomalies | string[] | e.g. `mixed_script`, `decode_depth_exceeded` |
+| anomalies | string[] | e.g. `mixed_script:N`, `decode_limit` |
 
 ### 2.3 Signal (detector output)
 
@@ -108,7 +110,7 @@ hifz-ai-security-firewall/
 | tool | string | | outcome | `EXECUTE` · `BLOCK` · `REQUIRE_APPROVAL` |
 | args | object | | checks | { checkId, passed, detail }[] |
 | sessionId | string | | reason | string |
-| triggeringContentIds | uuid[] | | reviewId | uuid or null |
+| triggeringContentIds | string[] — inspection UUIDs, or seeded-inbox ids such as `inbox-004` | | reviewId | uuid or null (the guard returns null; the review row is created by the API route afterwards) |
 
 ---
 
@@ -120,11 +122,11 @@ hifz-ai-security-firewall/
 |---|---|---|
 | text / markdown | Raw text; Markdown rendered to plain text | HTML comments in MD, link titles, image alt text, reference-style link definitions |
 | html | DOM parse → visible text | `<!-- comments -->`, `display:none` / `visibility:hidden`, `font-size:0`, text colour equal to background (inline styles only), `aria-hidden`, `alt`/`title` attributes, `<meta>` content, `<noscript>` |
-| email | Headers (From, Subject, Reply-To) + body; HTML part via the html adapter | Same as HTML for HTML bodies |
-| json | Walk all string values; path recorded per segment | — |
-| source_code (P1) | Full text; comments and string literals extracted as separate segments with line numbers | Comments are treated as hidden segments — not executed, but read by agents |
-| pdf (P1) | Text layer only | — |
-| docx (P2) | Document text | — |
+| email | A JSON envelope `{from, subject, replyTo?, bodyText?, bodyHtml?}` (full MIME parsing is out of scope); HTML body via the html adapter | Same as HTML for HTML bodies |
+| json | Walk all string values and join them. **[DECISION]** The JSON path is not recorded per segment (the `Span` type has no path field) | — |
+| source_code (P1) | Full text; comments and string literals extracted as separate segments with character offsets (no line numbers) | Comments and string literals are treated as hidden segments — not executed, but read by agents |
+| pdf (P1) | Text layer only. `content` carries the PDF bytes base64-encoded | — |
+| docx | **Not implemented.** The enum value is reserved; `/inspect` returns 400 "no ingest adapter" | — |
 
 **[ASSUMPTION]** Only inline-style hiding is detected; hiding via external stylesheets is out of scope and documented as a known limitation.
 
@@ -141,7 +143,7 @@ Detectors run on visible text, every hidden segment, and every decoded layer. Ev
 
 ### 3.3 Detectors
 
-- Defined in `policies/detectors.yaml`: id, attackType, severity, confidence, patterns (regex or phrase lists), applicable layers, notes.
+- Implemented as regex rules in `packages/firewall-core/src/detect/rules/*.ts` (id, attackType, severity, confidence, pattern, notes). `policies/detectors.yaml` is a reference listing of the same rules, kept in sync by hand, and is not loaded at runtime. The detector set is `detectors-v2`; calibration history is in `docs/calibration-log.md`.
 - Each detector needs ≥ 5 positive and ≥ 5 negative unit fixtures before it counts as implemented.
 
 | Attack type | Detector IDs (initial) | Examples of what they match |
@@ -151,7 +153,7 @@ Detectors run on visible text, every hidden segment, and every decoded layer. Ev
 | Secret Extraction | SEC-001…007 | "reveal/print/repeat your system prompt / instructions / hidden rules", requests for configuration |
 | Tool Abuse | TOL-001…007 (content, **primary**); Action Guard is second line | Text instructing tool invocation: "send an email to…", "call the function…", "forward all messages to…" |
 | Credential Theft | CRD-001…005 (content, **primary**) | Requests for passwords, API keys, tokens, "verify your credentials"; Action Guard G4 scans outbound args as second line |
-| Encoded Instructions | ENC-001 + any detector firing on a decoded layer | Decoded layer containing instruction patterns → severity raised one level |
+| Encoded Instructions | ENC-001, ENC-002 + any detector firing on a decoded layer | Decoded layer containing instruction patterns → severity raised one level |
 | Indirect Injection | IND-001…004 | Imperatives addressed to an AI/assistant inside untrusted sources; any detector firing on a hidden segment |
 
 ### 3.4 Risk scorer [DECISION — initial formula; every constant calibrated on the tuning split only and documented]
@@ -162,11 +164,14 @@ S_max             = max signalPoints over all signals
 corroboration     = +8 per additional distinct attackType, max +16
 layerAdjustment   = +10 if the top signal is in a hidden segment or decoded layer
 trustAdjustment   = +10 if source trust = untrusted and any instruction-type signal exists
+                    (instruction-type = instruction_override, role_change, tool_abuse, credential_theft)
 sessionAdjustment = min(15, sessionRisk / 5)           (§3.10)
 score             = clamp(0, 100, S_max + corroboration + layerAdjustment + trustAdjustment + sessionAdjustment)
 ```
 
-Every term is stored in `contributions` so the UI can explain the score. No signals and no anomalies → score 0.
+Band thresholds (env `RISK_THRESHOLD_*`): LOW < 30, MEDIUM 30–59, HIGH 60–84, CRITICAL ≥ 85.
+
+Every term is stored in `contributions` so the UI can explain the score. No signals → score 0. Anomalies are informational and never score by themselves; the one exception is `decode_limit`, which raises the signal ENC-002 (medium, confidence 0.6).
 
 Implemented in `packages/firewall-core/src/scorer.ts` with unit tests covering each term.
 
@@ -182,15 +187,15 @@ Implemented in `packages/firewall-core/src/scorer.ts` with unit tests covering e
 
 ### 3.6 Investigator agent
 
-**Plan (fixed skeleton, the LLM chooses steps inside it; max 4 tool calls, 20 s total budget):**
+**Plan (fixed skeleton, the LLM chooses steps inside it; max 4 investigative tool calls, at most 12 model turns, `LLM_TIMEOUT_MS` (default 20 s) per model call; there is no overall wall-clock cap):**
 
 1. Review signals and evidence spans.
 2. Optionally `decode(span)` suspicious runs the normalizer missed.
 3. Optionally `rescan(text)` → run core detectors on new text.
-4. Optionally `getSessionHistory(sessionId)` → last 10 decisions (bands + attack types only, no raw content).
+4. Optionally `getSessionHistory()` → last 10 decisions of the current session (bands + attack types only, no raw content). It takes no argument: the session is bound by the server.
 5. Produce a verdict.
 
-**Tools (all read-only, pure, no network):** `decode`, `rescan`, `getSessionHistory`, `getSourceProfile` (trust level + prior incident count for an origin).
+**Tools (all read-only, pure, no network):** `decode`, `rescan`, `getSessionHistory`, `getSourceProfile` (trust level + prior incident count for an origin; the trust it reports is a fixed default, not a per-origin lookup, by design). The investigator sees the normalized *visible* text only.
 
 **Prompt structure [DECISION]:**
 
@@ -204,11 +209,11 @@ Implemented in `packages/firewall-core/src/scorer.ts` with unit tests covering e
 - Invalid → one retry → still invalid → `llmStatus = invalid_output`, action REVIEW.
 - **Merge:** `finalBand = max(ruleBand, verdict.band)`.
 
-**Cache:** key = SHA-256(normalized content + detector version + model tag). Hit → `llmStatus = cached`.
+**Cache:** key = SHA-256(visible normalized text + detector version + model tag), in `llm_cache`. Hit → `llmStatus = cached`. The detector version is the constant `detectors-v2` passed in by the route, not read from a file.
 
 ### 3.7 Policy engine
 
-Policies are ordered rules in `policies/policy.yaml`; first match wins; the rule id is recorded on the decision.
+The rules are implemented in `packages/firewall-core/src/policy/decide-policy.ts`; `policies/policy.yaml` mirrors them for reference and is kept in sync by hand. First match wins and the rule id is recorded on the decision. **[DECISION]** POL-004, the LLM fail-safe, is evaluated *first*, ahead of POL-001..003: when the investigator should have weighed in and did not, and the rule band is already MEDIUM or higher, the outcome is REVIEW even for a HIGH untrusted case that POL-002 would otherwise BLOCK. Availability failure must not become a decision to release, but it also does not escalate to BLOCK unless `LLM_FAILURE_MODE=block`.
 
 | Rule | When | Action |
 |---|---|---|
@@ -225,18 +230,18 @@ Policies are ordered rules in `policies/policy.yaml`; first match wins; the rule
 2. Replace flagged spans with `[REMOVED BY HIFZ: <attackType>]`.
 3. Wrap the remaining untrusted content in data delimiters before it reaches the protected agent.
 
-Sanitized output is re-scanned once; if it still scores ≥ MEDIUM → BLOCK.
+Sanitized output is re-scanned once; if it still scores ≥ MEDIUM → BLOCK (reported under rule id POL-005).
 
 ### 3.8 Protected demo agent (email assistant)
 
 | Tool | Risk class | Default guard behaviour |
 |---|---|---|
-| read_inbox | low | EXECUTE; returned emails go through the firewall as `tool_output`, untrusted |
+| read_inbox | low | EXECUTE. Each email is run through the rule pipeline **in memory only** (ingest, normalize, detect, score as untrusted): no investigator, no policy decision, no inspection row. Its band is kept for the taint check G5. The model receives the email's visible text inside a per-call random delimiter; hidden segments are not forwarded **[DECISION]** |
 | summarize | low | EXECUTE |
 | send_email | high | Checks §3.9; external recipient → REQUIRE_APPROVAL |
-| read_secrets | critical | BLOCK unless the current user turn explicitly requested it and no untrusted content is in context |
+| read_secrets | critical | BLOCK (G5) if any inbox content has been read in the run; otherwise EXECUTE subject to G1–G4 and G6. There is no separate "explicitly requested by the user" check **[DECISION]** |
 
-The seeded inbox holds 6–8 synthetic emails: legitimate ones plus attack emails (hidden-text HTML, Base64 payload, credential phishing).
+The seeded inbox holds 7 synthetic emails: legitimate ones plus attack emails (hidden-text HTML, Base64 payload, credential phishing). **[VERIFIED]** The live model resists these on its own (its system prompt treats email as data), so the Action Guard is demonstrated with user-driven requests; see `docs/demo-script.md`. The scripted tests in `packages/agents/src/protected-agent/` show the guard stopping an agent that *does* follow an injection.
 
 ### 3.9 Action Guard (checks run in order; first failure decides)
 
@@ -246,14 +251,14 @@ The seeded inbox holds 6–8 synthetic emails: legitimate ones plus attack email
 | G2 | Arguments match the tool's parameter schema | BLOCK |
 | G3 | Destination allowlist (e.g. recipient domain in allowed set) | REQUIRE_APPROVAL |
 | G4 | Outbound secret scan: args contain any value from the fake-secrets registry, or key/token-shaped strings | BLOCK |
-| G5 | **Taint check** (only applies when the tool's risk class is high or critical — low-risk tools like `read_inbox`/`summarize` are never tainted): a triggering content id had finalBand ≥ MEDIUM, or came from an untrusted source | REQUIRE_APPROVAL (high) / BLOCK (critical) |
-| G6 | Per-session rate: at most 3 high-risk calls allowed in 5 min — the 4th trips this check | REQUIRE_APPROVAL |
+| G5 | **Taint check** (only applies when the tool's risk class is high or critical — low-risk tools like `read_inbox`/`summarize` are never tainted): a triggering content id had finalBand ≥ MEDIUM, or came from an untrusted source. As built, the triggering content is every email read so far in the run, all treated as untrusted, so any high-risk call after `read_inbox` is tainted (`send_email` → REQUIRE_APPROVAL, `read_secrets` → BLOCK) regardless of the emails' bands | REQUIRE_APPROVAL (high) / BLOCK (critical) |
+| G6 | Per-session rate: at most 3 high-risk calls allowed in 5 min — the 4th trips this check. Counts attempts of any non-low-risk tool regardless of outcome, seeded from `tool_calls` so it holds across separate `/agent/run` calls | REQUIRE_APPROVAL |
 | — | All pass | EXECUTE (simulated) |
 
 ### 3.10 Session risk
 
 - `sessionRisk` (0–100) stored per session.
-- On each inspection: `sessionRisk = sessionRisk × decay + finalScore × 0.3`, where decay applies exponentially over `SESSION_RISK_DECAY_MINUTES` [DECISION — calibrate].
+- On each `/inspect`: `sessionRisk = clamp(sessionRisk × 0.5^(minutes since last activity / SESSION_RISK_DECAY_MINUTES) + ruleScore × 0.3)`, where `ruleScore` is the pre-LLM score [DECISION — calibrate]. Only `/inspect` updates it; `/agent/run` does not.
 - Also stores a rolling list of the last 10 attack types, used by the investigator as context. (Multi-step jailbreak detection is not claimed.)
 
 ### 3.11 Human review queue
@@ -272,6 +277,8 @@ Every transition is an audit event with reviewer id and comment.
 - EXPIRED is **derived on read** from `expires_at` (15 minutes), not stored and not driven by a background job. A decision is a single conditional update (`state = PENDING and expires_at > now`), so a late click or two reviewers racing cannot both succeed; the loser gets 409.
 - Approving a held tool call records the decision and states the simulated effect; the tool row itself is never rewritten, so the audit trail keeps what the guard originally decided. Rejecting or expiring means the action never runs.
 - Reading the queue is public (demo data only, like `GET /events`); deciding requires a reviewer.
+- Approval does **not** resume the agent: `/agent/run` has already returned, so approving records the decision and states the simulated effect, and nothing is executed.
+- The database grants no direct access to `reviews` to anyone but the server (§5); the reviewer check is enforced in the route and is the only way to decide.
 
 ---
 
@@ -280,11 +287,12 @@ Every transition is an audit event with reviewer id and comment.
 | Method & path | Purpose | Auth | Rate limit |
 |---|---|---|---|
 | POST `/inspect` | Run the firewall on one ContentEnvelope | Public | Per IP |
-| POST `/agent/run` | Run the email assistant on a user instruction (full pipeline + guard) | Public | Per IP, stricter |
-| GET `/events` | Paginated audit events (filters: band, action, attackType, since) | Public read (demo data only) | Per IP |
-| GET `/events/{id}` | Full evidence: signals, contributions, verdict, guard checks | Public read | Per IP |
-| GET `/reviews` | The review queue (`?state=PENDING\|APPROVED\|REJECTED\|EXPIRED`, `?limit=`), newest first, each item with a summary of what it is about | Public read (demo data only) | Per IP |
-| POST `/reviews/{id}/decision` | Approve / reject with an optional comment (`{decision: "approve"\|"reject", comment?}`); 401 no/invalid token, 403 not a reviewer, 404 unknown id, 409 already decided or expired | Reviewer (`Authorization: Bearer <access token>`) | Per IP |
+| POST `/agent/run` | Run the email assistant on a user instruction (`{instruction, sessionId?}`); every proposed tool call passes the Action Guard. Response: `{finalMessage, toolCalls[{tool, args, guardOutcome, guardReason, checks[], triggeringContentIds}], llmStatus, sessionId}`. 400 invalid input; 503 if the demo agent's LLM is `none` or misconfigured, or the pipeline fails | Public | Per IP, stricter (3/min) |
+| GET `/agent/inbox` | The seeded inbox (id, from, subject, preview) shown in the Agent demo | Public | None |
+| GET `/events` | Audit events, newest first (filters: `band`, `action`, `attackType`, `since`; `cursor`, `limit` 1–100, default 20); response `{items, nextCursor}`. The `attackType` filter is applied after the page limit, so a filtered page can come back short | Public read (demo data only) | Per IP |
+| GET `/events/{id}` | Full evidence for one inspection: decision and policy rule, score contributions, signals with evidence, timings, the investigator verdict and its plan trace. It also returns guard checks for tool calls linked to this inspection by id; the agent demo links none today, so that list is empty in practice and guard checks are shown on the Agent demo screen instead | Public read | Per IP |
+| GET `/reviews` | The review queue (`?state=PENDING\|APPROVED\|REJECTED\|EXPIRED`, `?limit=` 1–100, default 50), newest first, each item with a summary of what it is about; response `{items}` | Public read (demo data only) | Per IP |
+| POST `/reviews/{id}/decision` | Approve / reject with an optional comment (`{decision: "approve"\|"reject", comment?}`); 401 no/invalid token, 403 not a reviewer, 404 unknown id, 409 already decided or expired; response `{item, effect}` | Reviewer (`Authorization: Bearer <access token>`) | Per IP |
 | GET `/metrics` | Live counters (inspection totals by band and action) + the latest eval run per split (`heldout`, `tuning`) and mode (`rules_only`, `rules_llm`); `null` where no run exists | Public | Per IP |
 | GET `/scenarios` · POST `/scenarios/{id}/replay` | Pre-built demo scenarios, one per committed attack type; replay re-runs the scenario through the live `/inspect` pipeline (same rate-limit bucket, real audit event) **[DECISION — live replay instead of stored results, so every number shown is a real run and no extra table is needed]** | Public | Per IP |
 | GET `/health` | App, DB, and per-role LLM status (`ok` / `rules_only` / `misconfigured`); overall `status` is `degraded` if the DB is down or a role is misconfigured. Reports status only — the reason goes to the server log | Public | — |
@@ -292,7 +300,9 @@ Every transition is an audit event with reviewer id and comment.
 **POST /inspect — request:** `content`, `contentType`, `source`, `origin?`, `sessionId?`
 **Response:** `decision`, `finalBand`, `score`, `attackTypes[]`, `reason`, `sanitizedContent?`, `eventId`, `reviewId` (set when the decision is REVIEW), `llmStatus`, `timings{}`, `contributions[]`, `signals[]`, `verdict?` — the last three added in task 2.10 so the Playground can render its score breakdown and evidence highlights from a single call, instead of a second round trip to `/events/{id}`.
 
-**Errors:** `400` invalid input (schema errors listed) · `413` over size cap · `429` rate limited · `503` only if the core pipeline itself fails (an LLM failure never yields 503 — it degrades per §3.5).
+**Errors:** `400` invalid input (schema errors listed) · `413` over size cap · `429` rate limited · `503` only if the core pipeline or the audit store fails (an LLM failure never yields 503 from `/inspect`; it degrades per §3.5. `/agent/run` is the exception: it returns 503 when its LLM is unavailable, because it cannot run without one).
+
+**Rate limits [ASSUMPTION]:** per IP, in memory, per serverless instance: `/agent/run` 3/min, every other limited route `RATE_LIMIT_PER_IP_PER_MIN` (default 10), `/health` and `/agent/inbox` unlimited. Because each instance has its own counter, this catches abuse within one warm instance but is not a global limit; a shared store would be needed for that.
 
 **Reviewer auth [DECISION]:** Supabase Auth email/password. The reviewer role is `app_metadata.role = "reviewer"`, which only the service key can write (`pnpm --filter @hifz/eval run seed-reviewer`), so a self-registered user never has it; the server verifies the access token and the role on every decision. The browser holds only the public anon key, for sign-in. Disable public sign-ups in the Supabase project. The demo login is shared with judges privately, not in the repository.
 
@@ -302,11 +312,11 @@ Every transition is an audit event with reviewer id and comment.
 
 | Table | Key columns |
 |---|---|
-| `sessions` | id, created_at, session_risk, recent_attack_types (text[]), last_activity_at |
-| `inspections` | id, correlation_id, session_id → sessions, content_type, source, trust, origin, content_hash, content_excerpt (≤ 2 KB), score, rule_band, final_band, action, policy_rule_id, reason, llm_status, model_tag, timings (jsonb), created_at |
+| `sessions` | id, created_at, session_risk, recent_attack_types (`attack_type[]`), last_activity_at |
+| `inspections` | id, correlation_id, session_id → sessions, content_type, source, trust, origin, content_hash, content_excerpt (≤ 2 KB), score, rule_band, final_band, action, policy_rule_id, reason, llm_status, timings (jsonb), contributions (jsonb), created_at. The `model_tag` column exists but is not written; the model tag lives in `llm_verdicts`. Sanitized content is returned in the API response but not stored |
 | `signals` | id, inspection_id → inspections, detector_id, attack_type, severity, confidence, layer, evidence (jsonb) |
 | `llm_verdicts` | id, inspection_id, model_tag, verdict (jsonb), steps (jsonb), latency_ms, status |
-| `tool_calls` | id, session_id, tool, args_redacted (jsonb), triggering_inspection_ids (uuid[]), outcome, checks (jsonb), review_id, created_at |
+| `tool_calls` | id, session_id, tool, args_redacted (jsonb), triggering_inspection_ids (uuid[]), outcome, checks (jsonb), review_id, created_at. `args_redacted` holds the call's arguments, plus `_triggeringContentIds` for triggering content that has no inspection row (seeded-inbox ids); `triggering_inspection_ids` holds only real inspection UUIDs |
 | `reviews` | id, kind (content / tool_call), ref_id, state, reviewer_id, comment, created_at, decided_at, expires_at |
 | `llm_cache` | cache_key (pk), verdict (jsonb), model_tag, created_at |
 | `eval_runs` | id, git_sha, mode (rules_only / rules_llm), split, model_tag, started_at, finished_at, summary (jsonb) |
@@ -314,7 +324,9 @@ Every transition is an audit event with reviewer id and comment.
 
 **Indexes:** `inspections(created_at desc)`, `inspections(final_band, action)`, `signals(attack_type)`, `reviews(state)`, `eval_results(run_id, category)`.
 
-**Row Level Security [DECISION]:** enabled on all tables. The browser has no direct write access; all writes go through server routes using the server-only key. The reviewer role can read and update `reviews` only.
+**Row Level Security [DECISION]:** enabled on all tables. `anon` and signed-in users may `SELECT` `inspections`, `signals`, `tool_calls`, `eval_runs` and `eval_results` (demo data, public by design). `reviews`, `sessions`, `llm_verdicts` and `llm_cache` have no policy, so only the server's service key can touch them. Nothing grants `INSERT`, `UPDATE` or `DELETE` to the browser; all writes go through server routes using the server-only key, and the reviewer check lives in `POST /reviews/{id}/decision`.
+
+**Correction (2026-10-01):** the initial schema let *any* signed-in user read and update `reviews` directly through Supabase's REST API, so the route's reviewer check was bypassable. Reproduced on the dev project and closed by migration `20261001000001_reviews_server_only.sql`, which drops those two policies. The migration must be applied to every project (dev and demo).
 
 **Retention [DECISION]:** inspections older than 30 days are deleted by a scheduled job, keeping the free-tier 500 MB limit safe.
 
@@ -322,31 +334,26 @@ Every transition is an audit event with reviewer id and comment.
 
 ## 6. Key sequences
 
-### 6.1 Indirect injection via email → blocked tool call
+### 6.1 Agent asked to email after reading the inbox → held for approval
 
 ```mermaid
 sequenceDiagram
   participant U as User
   participant A as Protected agent
   participant G as Action Guard
-  participant F as Firewall (core)
-  participant I as Investigator
   participant DB as Supabase
-  U->>A: "Summarise my inbox and reply to urgent mails"
+  U->>A: "Summarise my inbox and email it to my manager at an outside address"
   A->>G: read_inbox()
-  G-->>A: EXECUTE → emails
-  A->>F: inspect(each email, source=email, untrusted)
-  F->>F: html adapter extracts hidden text, detectors fire (IND/CRD)
-  F->>I: score 55 (escalation band)
-  I-->>F: verdict HIGH (credential theft)
-  F->>DB: inspection + signals + verdict
-  F-->>A: email #3 → BLOCK; others ALLOW
-  A->>G: send_email(to=attacker, body=fake API key)
-  G->>G: G4 outbound secret scan fails
-  G->>DB: tool_call BLOCK
-  G-->>A: BLOCKED + reason
-  A-->>U: Summary + "1 email quarantined, 1 action blocked"
+  G-->>A: EXECUTE → each email scored in memory (no audit row), wrapped in a random delimiter
+  Note over G: bands kept for the taint check G5
+  A->>G: send_email(to=outside address, body=summary)
+  G->>G: G1 and G2 pass, G3 fails: destination not on the allowlist
+  G-->>A: REQUIRE_APPROVAL (first failing check decides)
+  A->>DB: tool_call + guard checks, review item PENDING
+  A-->>U: "I prepared the email but it is held for approval"
 ```
+
+The same call to an allow-listed address would fail G5 instead (the inbox was read, so the call is tainted), and a call whose body carries a secret fails G4 and is blocked. The live demo uses these user-driven requests because the live model refuses injected instructions on its own; see `docs/demo-script.md`. The deterministic proof that the guard stops an agent that *follows* an injection is the scripted tests in `packages/agents/src/protected-agent/`.
 
 ### 6.2 LLM unavailable → fail safe
 
@@ -362,18 +369,20 @@ sequenceDiagram
   F->>F: create review item (PENDING)
 ```
 
-### 6.3 Human approval of a risky tool call
+### 6.3 Human decision on a held tool call
 
 ```mermaid
 sequenceDiagram
-  participant A as Agent
   participant G as Action Guard
+  participant DB as Supabase
   participant R as Reviewer
-  A->>G: send_email(to=external domain)
-  G-->>A: REQUIRE_APPROVAL (G3)
-  G->>R: review item PENDING
-  R->>G: APPROVE with comment
-  G-->>A: EXECUTE (simulated)
+  participant API as POST /reviews/{id}/decision
+  G->>DB: REQUIRE_APPROVAL → review item PENDING (expires in 15 min)
+  R->>API: approve or reject, with comment (Bearer token)
+  API->>API: verify token and app_metadata.role = reviewer
+  API->>DB: conditional update, PENDING and not expired → APPROVED or REJECTED
+  API-->>R: item + effect text ("simulated send released" / "stays blocked")
+  Note over API: the agent run has already returned and is not resumed, nothing is executed
 ```
 
 ---
@@ -387,21 +396,23 @@ sequenceDiagram
 
 | Set | Own cases | Public cases |
 |---|---|---|
-| Each committed attack category | ≥ 25, spread across content types incl. source code and PDF | Where available |
-| Legitimate content | ≥ 100 (incl. security-themed text that must NOT be blocked) | NotInject + benign BIPIA contexts |
+| Each committed attack category | 25 cases in total, own cases plus a minority of public ones: Indirect Injection 17 own + 8 BIPIA, Instruction Override 18 + 7 deepset, Role Change 20 + 5 deepset, Secret Extraction 20 + 5 deepset; Credential Theft, Encoded Instructions and Tool Abuse are all own | See `datasets/ATTRIBUTION.md` |
+| Legitimate content | 100 in total: 60 own (incl. security-themed text that must NOT be blocked), 20 deepset, 20 NotInject (over-defence cases) | NotInject + deepset |
+
+Content types across the 275 cases: text 187, html 26, email 17, json 14, markdown 13, source_code 10, pdf 8. The plan's "≥ 100 *own* legitimate cases" was not met; the total of 100 was.
 
 **Split:** deterministic hash of `caseId` → 60% tuning / 40% held-out. Held-out cases are never used to change rules or thresholds. The split file is committed.
 
-**Runner:** loads cases → runs the pipeline (mode flag) → writes `eval_results` + a JSON report artefact → prints a summary table.
+**Runner:** loads cases → runs the pipeline (mode flag) → prints a summary table → writes a JSON report and, unless `--skip-db`, `eval_runs` / `eval_results`. In `rules_llm` mode requests are throttled to stay under a provider's per-minute cap, and each case's investigator status is recorded so a run with LLM failures is visible.
 
 **Metric definitions:**
 
 - Detection rate (per category) = cases with actual action ∈ {BLOCK, REVIEW, SANITIZE} ÷ attack cases.
 - False-positive rate = legitimate cases not ALLOWed ÷ legitimate cases.
-- Precision / recall computed on BLOCK+REVIEW vs. ALLOW.
+- Precision / recall computed with any non-ALLOW action (BLOCK, REVIEW or SANITIZE) counted as flagged, against ALLOW.
 - Latency p50 / p95 per mode.
 
-**CI:** run manually (`workflow_dispatch`) to avoid burning Actions minutes on every commit; rules-only mode runs on the held-out split, and the build fails if the false-positive rate or detection rate regresses beyond a set tolerance.
+**CI:** GitHub Actions runs on manual trigger (`workflow_dispatch`) to avoid burning minutes on every commit, and runs lint, typecheck and the unit tests. **[DECISION]** The evaluation is not part of CI: it is run by hand (`pnpm eval`) and recorded to Supabase and `docs/eval-results/`. An automated regression gate on false-positive or detection rate is not implemented.
 
 ---
 
@@ -410,11 +421,13 @@ sequenceDiagram
 | Source | Contents |
 |---|---|
 | Environment variables | Provider per role, model ids, API keys, thresholds, escalation band, failure mode, rate limits, Supabase URL/keys |
-| `policies/policy.yaml` | Ordered policy rules (§3.7) |
-| `policies/detectors.yaml` | Detector definitions (§3.3), with a `version` used in cache keys |
-| `policies/tools.yaml` | Tool allowlist, risk class, parameter schema, destination allowlist |
+| `policies/policy.yaml` | Reference mirror of the ordered policy rules (§3.7); the rules are implemented in `decide-policy.ts` |
+| `policies/detectors.yaml` | Reference listing of the detector rules (§3.3), with a `version`; the rules are implemented in `detect/rules/*.ts`, and the cache key uses the constant `detectors-v2` |
+| `policies/tools.yaml` | Reference mirror of the tool allowlist, risk classes and destination allowlist; implemented in `protected-agent/tools-registry.ts` |
 
-The app validates all configuration at startup and refuses to boot on invalid config — missing key for a selected provider, unordered thresholds, Ollama selected in the demo environment. See `packages/config/src/env.ts`.
+None of the YAML files is read at runtime. They are hand-maintained documentation of what the code does, and the code wins if they drift.
+
+`loadEnv()` validates the environment schema on first use and throws on an invalid value: a missing Supabase setting, unordered thresholds, or Ollama selected in the demo environment. A missing *provider key or model id* is deliberately **not** a startup failure: that role degrades to rules-only (§3.5) and shows as `misconfigured` on `/health`. See `packages/config/src/env.ts`.
 
 ---
 
@@ -424,24 +437,25 @@ The app validates all configuration at startup and refuses to boot on invalid co
 |---|---|
 | Max input size | 100 KB |
 | Decode depth / decoded bytes | 3 / 50 KB |
-| Investigator total budget | 20 s, max 4 tool calls, 1 retry on invalid output |
-| Protected agent budget | 45 s, max 6 tool calls per run |
+| Investigator | Max 4 investigative tool calls and 1 retry on invalid output (enforced); at most 12 model turns; `LLM_TIMEOUT_MS` (default 20 s) per model call. There is no overall wall-clock cap |
+| Protected agent | Enforced: at most 12 model turns per run, `LLM_TIMEOUT_MS` per model call, and the G6 rate limit on high-risk calls. **[ASSUMPTION — target, not enforced]** a total 45 s budget and a 6-tool-call cap per run: the code does not apply them (a run has made 8 calls) |
 | Review expiry | 15 min |
-| Rate limit | 10 req/min per IP (`/inspect`), 3 req/min (`/agent/run`) |
+| Rate limit | 10 req/min per IP (`/inspect` and the other limited routes), 3 req/min (`/agent/run`); in memory per serverless instance (§4) |
 
 ---
 
 ## 10. Frontend screens
 
-| Screen | Content | Priority |
+| Screen | Content | Status |
 |---|---|---|
-| Dashboard | Counters, band distribution, latest events, latest held-out eval summary | P0 |
-| Playground | Paste content, choose type/source, see decision + score breakdown + evidence highlights | P0 |
-| Agent demo | Email assistant chat; inbox panel; live pipeline trace per step; blocked actions highlighted | P0 |
-| Event detail | Signals, contributions, investigator plan trace, guard checks, raw vs. sanitized view | P0 |
-| Review queue | Pending items, approve/reject, comment | P0 |
-| Evaluation report | Per-category table, FP rate, rules-only vs. rules+LLM comparison | P1 |
-| Scenario replay | One-click scripted attacks — one per committed type; used in the video to show all 7 | P0 |
+| Home (`/`) | Links to the five screens below | Built |
+| Playground | Paste content, choose type/source, see decision + score breakdown + evidence highlights; links to the review queue when the decision is REVIEW | Built |
+| Agent demo | Email assistant; inbox panel; one-click prompts that exercise each guard check; per-tool-call trace with each G1–G6 result; held calls link to the review queue | Built |
+| Event detail (`/events/{id}`) | Decision and policy rule, score breakdown, content excerpt (≤ 2 KB), timings, signals with evidence, investigator verdict and plan trace | Built. Not built: a raw-vs-sanitized view (sanitized text is not stored), and guard checks are empty in practice (§4) |
+| Review queue (`/reviews`) | Pending, decided and expired items with a live countdown; public read; reviewer sign-in to approve or reject with a comment | Built |
+| Evaluation (`/evaluation`) | Per-category table, FP and detection rate, rules-only vs rules+LLM for the held-out and tuning splits, LLM-failure count, live counters (total and by action) | Built |
+| Scenario replay (`/scenarios`) | One-click scripted attacks, one per committed type, run live through the pipeline; "Run all 7" | Built |
+| Dashboard | Band distribution, latest events | **Not built.** Only the counters on the Evaluation page exist; `GET /metrics` also returns a band breakdown that no screen renders |
 
 ---
 
@@ -452,8 +466,8 @@ The app validates all configuration at startup and refuses to boot on invalid co
 | Unit | Each adapter, normalizer step, detector (positive + negative fixtures), scorer, policy rules, guard checks | `firewall-core`, `agents` |
 | Contract | Investigator output schema validation incl. malformed and hostile outputs | `agents` |
 | Pipeline | Golden end-to-end cases with expected decisions | `eval` |
-| Evaluation | Full dataset, both modes | `eval` + CI |
-| E2E demo | The video scenarios run automatically before recording | `apps/web` |
+| Evaluation | Full dataset, both modes | `eval`, run by hand and recorded (not in CI) |
+| E2E | Playwright specs for the Playground, Agent demo, Scenarios, Review queue and navigation, run against the real app and database (`pnpm --filter @hifz/web test:e2e`); manual, not in CI. They do not cover every scenario against a live LLM | `apps/web/e2e` |
 
 ---
 
@@ -463,4 +477,8 @@ The app validates all configuration at startup and refuses to boot on invalid co
 - Hidden text via external CSS is not detected.
 - No OCR/image inputs (hence no D3 claim).
 - Rule detectors can be evaded by novel phrasing; the investigator reduces but does not eliminate this — measured rates are reported as-is.
-- Demo tools and secrets are simulated.
+- Demo tools and secrets are simulated; approving a held action releases a simulated tool and does not resume the agent.
+- No Word-document (`docx`) support, and PDF is text layer only.
+- Rate limiting is per serverless instance, not global.
+- The protected agent's 45 s / 6-call budget is a target the code does not enforce (§9).
+- The live demo model resists email injection on its own, so the guard is demonstrated with user-driven requests; the scripted tests cover a manipulated agent.
