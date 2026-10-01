@@ -16,7 +16,8 @@ Read the relevant LLD section **before** implementing any module. If code and do
 ## Our claim
 
 **F3 × D2.** Seven committed attack types, all detected at the **content stage** (before the agent is influenced): Instruction Override, Role Change, Secret Extraction, Tool Abuse, Credential Theft, Encoded Instructions, Indirect Prompt Injection.
-Not claimed: Context Poisoning, Multi-Step Jailbreaks, D3 (no OCR/images).
+Images (PNG/JPEG, read by offline OCR) and PDF/Word documents are supported as extra inputs and measured on their own suite (`datasets/images/`), never merged into the held-out split.
+Not claimed: Context Poisoning, Multi-Step Jailbreaks, D3 (the image suite is small and rules-only detection on it is below 50%).
 
 ## Architecture in one screen
 
