@@ -30,6 +30,8 @@ const MAX_INPUT_BYTES = 100 * 1024;
  * call is bounded. The rule detectors still scan the whole text; only the model's view is truncated.
  */
 export const MAX_INVESTIGATOR_CHARS = 6000;
+/** How much extracted text the response echoes back for display. */
+const EXTRACTED_PREVIEW_CHARS = 4000;
 const BINARY_TYPES: ReadonlySet<string> = new Set(["pdf", "docx"]);
 
 const inspectRequestSchema = z.object({
@@ -60,6 +62,8 @@ export interface InspectResponseBody {
   signals: Signal[];
   /** Present only when the investigator LLM actually ran (llmStatus === "ok"). */
   verdict: InvestigatorVerdict | null;
+  /** For pdf/docx uploads: what the ingest stage read out of the file (the Playground's "what the firewall read"). */
+  extracted: { visibleText: string; hiddenText: string[] } | null;
 }
 
 export type InspectOutcome =
@@ -225,6 +229,9 @@ export async function runInspection(rawBody: unknown, deps: RunInspectionDeps): 
         contributions: riskAssessment.contributions,
         signals,
         verdict: escalation.verdict,
+        extracted: BINARY_TYPES.has(body.contentType)
+          ? { visibleText: ingested.visibleText.slice(0, EXTRACTED_PREVIEW_CHARS), hiddenText: ingested.hiddenSegments.map((h) => h.excerpt).slice(0, 20) }
+          : null,
       },
     };
   } catch (err) {

@@ -13,6 +13,9 @@ import { defineConfig, devices } from "@playwright/test";
  *   - Every test run writes real rows to hifz-ai-dev. That's expected, not
  *     a leak — this is a dev project, not the demo one judges see.
  */
+// E2E_PORT runs the suite on its own server, so it can never attach to some other app already on port 3000.
+const PORT = process.env.E2E_PORT ?? "3000";
+
 export default defineConfig({
   testDir: "./e2e",
   fullyParallel: false,
@@ -21,15 +24,15 @@ export default defineConfig({
   timeout: 60_000,
   reporter: [["list"]],
   use: {
-    baseURL: "http://localhost:3000",
+    baseURL: `http://localhost:${PORT}`,
     trace: "retain-on-failure",
     screenshot: "only-on-failure",
   },
   projects: [{ name: "chromium", use: { ...devices["Desktop Chrome"] } }],
   webServer: {
-    command: "pnpm dev",
-    url: "http://localhost:3000",
-    reuseExistingServer: !process.env.CI,
+    command: `pnpm dev --port ${PORT}`,
+    url: `http://localhost:${PORT}`,
+    reuseExistingServer: !process.env.CI && !process.env.E2E_PORT,
     timeout: 60_000,
   },
 });

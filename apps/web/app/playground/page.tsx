@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import Link from "next/link";
 import type { InspectResponseBody } from "../../lib/inspect.js";
 import { ActionBadge } from "../../components/badges.js";
@@ -8,7 +8,35 @@ import { ScoreBreakdown } from "../../components/score-breakdown.js";
 import { SignalsList } from "../../components/signals-list.js";
 import { VerdictCard } from "../../components/verdict-card.js";
 
-const CONTENT_TYPES = ["text", "markdown", "html", "email", "json"] as const;
+const CONTENT_TYPES = ["text", "markdown", "html", "email", "json", "pdf", "docx"] as const;
+type ContentType = (typeof CONTENT_TYPES)[number];
+
+/** Demo uploads are small by design (cost and latency). 74 KB of file is about 99 KB of base64, under the API's 100 KB cap. */
+const MAX_FILE_BYTES = 74 * 1024;
+
+const FILE_SAMPLES = [
+  { label: "Word: hidden instruction", file: "hidden-instruction.docx", note: "A Word memo with a hidden-font paragraph that tells the agent to forward the inbox." },
+  { label: "Word: clean memo", file: "clean-memo.docx", note: "An ordinary memo with no hidden text." },
+  { label: "PDF: injected invoice", file: "injected-invoice.pdf", note: "A PDF invoice with an instruction in its visible text. PDFs have no hidden layer here, so it is caught as visible text." },
+] as const;
+
+function fileContentType(name: string): "pdf" | "docx" | null {
+  const lower = name.toLowerCase();
+  return lower.endsWith(".pdf") ? "pdf" : lower.endsWith(".docx") ? "docx" : null;
+}
+
+async function toBase64(file: Blob): Promise<string> {
+  const bytes = new Uint8Array(await file.arrayBuffer());
+  let binary = "";
+  for (let i = 0; i < bytes.length; i += 0x8000) binary += String.fromCharCode(...bytes.subarray(i, i + 0x8000));
+  return btoa(binary);
+}
+
+interface AttachedFile {
+  name: string;
+  size: number;
+  base64: string;
+}
 const SOURCES = ["user_message", "web_page", "email", "api_response", "document", "tool_output"] as const;
 
 const EXAMPLES = [
@@ -45,12 +73,40 @@ const fieldControl =
 
 export default function PlaygroundPage() {
   const [content, setContent] = useState<string>(EXAMPLES[0].content);
-  const [contentType, setContentType] = useState<(typeof CONTENT_TYPES)[number]>(EXAMPLES[0].contentType);
+  const [contentType, setContentType] = useState<ContentType>(EXAMPLES[0].contentType);
   const [source, setSource] = useState<(typeof SOURCES)[number]>(EXAMPLES[0].source);
   const [origin, setOrigin] = useState("");
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<InspectResponseBody | null>(null);
   const [error, setError] = useState<ApiError | null>(null);
+  const [attached, setAttached] = useState<AttachedFile | null>(null);
+  const [fileNote, setFileNote] = useState<string | null>(null);
+  const fileInput = useRef<HTMLInputElement>(null);
+
+  async function attach(file: File | Blob, name: string, note: string | null = null) {
+    const type = fileContentType(name);
+    if (!type) {
+      setError({ error: "unsupported file", message: "Upload a .pdf or .docx file." });
+      return;
+    }
+    if (file.size > MAX_FILE_BYTES) {
+      setError({ error: "file too large", message: `The demo accepts files up to ${MAX_FILE_BYTES / 1024} KB (this one is ${Math.ceil(file.size / 1024)} KB).` });
+      return;
+    }
+    setError(null);
+    setResult(null);
+    setAttached({ name, size: file.size, base64: await toBase64(file) });
+    setFileNote(note);
+    setContentType(type);
+    setSource("document");
+  }
+
+  function detach() {
+    setAttached(null);
+    setFileNote(null);
+    setContentType("text");
+    if (fileInput.current) fileInput.current.value = "";
+  }
 
   async function runInspection() {
     setLoading(true);
@@ -60,7 +116,7 @@ export default function PlaygroundPage() {
       const res = await fetch("/api/v1/inspect", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ content, contentType, source, ...(origin ? { origin } : {}) }),
+        body: JSON.stringify({ content: attached ? attached.base64 : content, contentType, source, ...(origin ? { origin } : {}) }),
       });
       const json = await res.json();
       if (!res.ok) {
@@ -79,7 +135,7 @@ export default function PlaygroundPage() {
     <div className="rise-in">
       <h1 className="text-xl font-medium tracking-tight text-ink">Playground</h1>
       <p className="mt-1.5 max-w-xl text-[13px] leading-relaxed text-ink-dim">
-        Paste content, choose its type and source, and run it through the firewall pipeline — ingest → normalize → detect → score →
+        Paste content or upload a small PDF or Word file, and run it through the firewall pipeline — ingest → normalize → detect → score →
         escalate.
       </p>
 
@@ -102,13 +158,64 @@ export default function PlaygroundPage() {
             ))}
           </div>
 
-          <textarea
-            value={content}
-            onChange={(e) => setContent(e.target.value)}
-            rows={10}
-            spellCheck={false}
-            className="mt-4 w-full rounded-md border border-line bg-surface p-4 font-mono text-[13px] leading-relaxed text-ink outline-none transition-colors duration-150 focus:border-accent/50"
-            placeholder="Paste content to inspect…"
+          <div className="mt-2 flex flex-wrap gap-1.5">
+            {FILE_SAMPLES.map((sample) => (
+              <button
+                key={sample.file}
+                type="button"
+                onClick={async () => {
+                  const res = await fetch(`/samples/${sample.file}`);
+                  await attach(await res.blob(), sample.file, sample.note);
+                }}
+                className="rounded-md border border-line px-2.5 py-1 text-[12px] text-ink-dim transition-colors duration-150 hover:border-line-strong hover:text-ink"
+              >
+                {sample.label}
+              </button>
+            ))}
+          </div>
+
+          {attached ? (
+            <div className="mt-4 rounded-md border border-line bg-surface p-4" data-testid="attached-file">
+              <div className="flex items-center justify-between gap-3">
+                <div className="min-w-0 text-[13px] text-ink">
+                  <span className="truncate font-medium">{attached.name}</span>
+                  <span className="ml-2 text-ink-faint">{Math.max(1, Math.round(attached.size / 1024))} KB</span>
+                </div>
+                <button type="button" onClick={detach} className="text-[12px] text-ink-dim hover:text-ink">
+                  Remove
+                </button>
+              </div>
+              {fileNote && <p className="mt-2 text-[12px] leading-relaxed text-ink-dim">{fileNote}</p>}
+            </div>
+          ) : (
+            <>
+              <textarea
+                value={content}
+                onChange={(e) => setContent(e.target.value)}
+                rows={10}
+                spellCheck={false}
+                className="mt-4 w-full rounded-md border border-line bg-surface p-4 font-mono text-[13px] leading-relaxed text-ink outline-none transition-colors duration-150 focus:border-accent/50"
+                placeholder="Paste content to inspect…"
+              />
+              <div className="mt-2 text-[12px] text-ink-faint">
+                or{" "}
+                <button type="button" onClick={() => fileInput.current?.click()} className="text-accent hover:underline">
+                  upload a PDF or Word file
+                </button>{" "}
+                (up to {MAX_FILE_BYTES / 1024} KB)
+              </div>
+            </>
+          )}
+          <input
+            ref={fileInput}
+            type="file"
+            accept=".pdf,.docx"
+            data-testid="file-input"
+            className="hidden"
+            onChange={(e) => {
+              const f = e.target.files?.[0];
+              if (f) void attach(f, f.name);
+            }}
           />
 
           <div className="mt-4 grid grid-cols-2 gap-4">
@@ -116,7 +223,8 @@ export default function PlaygroundPage() {
               Content type
               <select
                 value={contentType}
-                onChange={(e) => setContentType(e.target.value as (typeof CONTENT_TYPES)[number])}
+                disabled={attached !== null}
+                onChange={(e) => setContentType(e.target.value as ContentType)}
                 className={fieldControl}
               >
                 {CONTENT_TYPES.map((t) => (
@@ -146,7 +254,7 @@ export default function PlaygroundPage() {
           <button
             type="button"
             onClick={runInspection}
-            disabled={loading || content.trim().length === 0}
+            disabled={loading || (!attached && content.trim().length === 0)}
             className="mt-6 rounded-md bg-ink px-4 py-2 text-[13px] font-medium text-canvas transition-opacity duration-150 hover:opacity-85 disabled:cursor-not-allowed disabled:opacity-30"
           >
             {loading ? "Inspecting…" : "Run inspection"}
@@ -195,6 +303,27 @@ export default function PlaygroundPage() {
                   )}
                 </div>
               </div>
+
+              {result.extracted && (
+                <div className="rounded-lg border border-line bg-surface p-5" data-testid="what-it-read">
+                  <div className="text-[11px] font-medium uppercase tracking-wide text-ink-faint">What the firewall read</div>
+                  <pre className="mt-2 max-h-48 overflow-auto whitespace-pre-wrap font-mono text-[12px] leading-relaxed text-ink">
+                    {result.extracted.visibleText || "(no visible text)"}
+                  </pre>
+                  {result.extracted.hiddenText.length > 0 && (
+                    <div className="mt-3">
+                      <div className="text-[11px] font-medium uppercase tracking-wide text-[color:var(--band-high)]">
+                        Hidden text a reader would not see
+                      </div>
+                      {result.extracted.hiddenText.map((t, i) => (
+                        <pre key={i} className="mt-1 whitespace-pre-wrap font-mono text-[12px] leading-relaxed text-[color:var(--band-high)]">
+                          {t}
+                        </pre>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
 
               <ScoreBreakdown score={result.score} band={result.finalBand} contributions={result.contributions} />
 
