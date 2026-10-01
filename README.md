@@ -81,9 +81,11 @@ We claim **F3 × D2** on the hackathon grid: seven attack types, detected at the
 | Encoded Instructions | Recursive decode, then re-scan of the decoded layers |
 | Indirect Prompt Injection | Hidden-text extraction plus content detectors |
 
-**Not claimed:** Context Poisoning, Multi-Step Jailbreaks, and D3 (no OCR or image input). The reasoning is in [`docs/decision-log.md`](docs/decision-log.md).
+**Not claimed:** Context Poisoning, Multi-Step Jailbreaks, and D3. Images are supported but measured on a small separate suite, which does not justify a D3 claim. The reasoning is in [`docs/decision-log.md`](docs/decision-log.md).
 
-Supported input types: plain text, Markdown, HTML, email, JSON, source code (comments and strings are scanned) and PDF (text layer only).
+Supported input types: plain text, Markdown, HTML, email, JSON, source code (comments and strings are scanned), PDF (text layer only), Word `.docx` (including hidden-font text, white or tiny text, tracked deletions, comments and footnotes) and PNG/JPEG images (read by offline OCR). Uploads are deliberately small: up to about 75 KB, PDFs up to 5 pages, images up to 1600 px. The Playground has a file picker and one-click samples, and shows what the firewall read out of the file.
+
+Images are measured separately from the held-out set: on 36 generated images (21 attacks, 15 legitimate), rules-only detection is 47.6% via OCR (57.1% if OCR were perfect) with 0 false positives. Details and what OCR missed are in [`datasets/images/README.md`](datasets/images/README.md); run it with `pnpm eval:images`.
 
 ## Security model
 
@@ -276,7 +278,7 @@ After a deploy, check `GET /api/v1/health`: `status: "ok"` with both LLM roles `
 - **Review decisions are simulated.** Approving a held tool call releases a simulated tool, and expiry is evaluated when the queue is read, not by a background job.
 - **Rule-based detection can be evaded by novel phrasing.** Held-out detection is 79.4%, with role-play prompts the weakest case; the investigator helps with severity but does not close the gap.
 - **The live agent model resists injection on its own**, so in the demo the guard acts on user-driven requests (an outside recipient, a secret, a tainted send), not on a model that was fooled. The deterministic proof for a manipulated model is the scripted tests in `packages/agents/src/protected-agent/`.
-- **Input coverage:** English-only rules; hidden text from external stylesheets is not detected (inline styles are); no OCR or images; no Word documents; PDF is text layer only.
+- **Input coverage:** English-only rules; hidden text from external stylesheets is not detected (inline styles are). PDF is text layer only (white text in a PDF is read as ordinary visible text). Word hiding inherited from a style is not seen, and the docx reader has not yet been confirmed against a file saved by Word itself. OCR misses some faint or heavy display text, and an image with no readable text gives the firewall nothing to judge. Hidden text from a Word file is caught by the rules but is not shown to the LLM investigator.
 - **Rate limiting is per serverless instance** (in-memory), so it catches abuse within one warm instance but is not a global limit. A shared store would fix this.
 - **LLM numbers are model-specific and not deterministic.** The held-out rules+LLM run used Gemini on a free tier; results can shift with the provider's model version.
 - **Two band colours are close.** The amber (MEDIUM) and orange (HIGH) risk-band colours are hard to tell apart for some viewers (ΔE 6.8, below the 15 floor of the data-visualisation validator). Every use pairs the colour with a text label and a fixed order, so the colour is never the only signal.

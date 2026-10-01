@@ -40,7 +40,7 @@ hifz-ai-security-firewall/
 | id | uuid | Generated at ingest |
 | correlationId | string | Propagated to every stage and audit row |
 | sessionId | string | Groups a conversation / agent run |
-| contentType | enum | `text` · `markdown` · `html` · `email` · `json` · `source_code` · `pdf`. `docx` is a reserved enum value only: there is no adapter and `/inspect` answers 400 |
+| contentType | enum | `text` · `markdown` · `html` · `email` · `json` · `source_code` · `pdf` · `docx` · `image`. For the three binary types `content` is the file's bytes, base64-encoded |
 | raw | string | Size-capped (see §9) |
 | provenance.source | enum | `user_message` · `web_page` · `email` · `api_response` · `document` · `tool_output` |
 | provenance.trust | enum | `trusted` · `semi_trusted` · `untrusted` |
@@ -125,8 +125,15 @@ hifz-ai-security-firewall/
 | email | A JSON envelope `{from, subject, replyTo?, bodyText?, bodyHtml?}` (full MIME parsing is out of scope); HTML body via the html adapter | Same as HTML for HTML bodies |
 | json | Walk all string values and join them. **[DECISION]** The JSON path is not recorded per segment (the `Span` type has no path field) | — |
 | source_code (P1) | Full text; comments and string literals extracted as separate segments with character offsets (no line numbers) | Comments and string literals are treated as hidden segments — not executed, but read by agents |
-| pdf (P1) | Text layer only. `content` carries the PDF bytes base64-encoded | — |
-| docx | **Not implemented.** The enum value is reserved; `/inspect` returns 400 "no ingest adapter" | — |
+| pdf (P1) | Text layer only. `content` carries the PDF bytes base64-encoded. Rejects a non-PDF, a corrupt file, more than 5 pages, or a read over 10 s with a 400 | — |
+| docx (P1) | `content` carries the .docx bytes base64-encoded. Reads `word/document.xml` (visible text, one line per paragraph or cell) plus `comments`, `footnotes` and `endnotes`, with a scoped extractor (no XML parser) over a zip read by `fflate` under limits: at most 200 entries, 2 MB per part declared and actual | Runs with `w:vanish`; text coloured near-white (all channels ≥ 0xF0) unless the paragraph or cell is dark-shaded; size ≤ 1 pt; tracked deletions (`w:delText`); comments; footnotes and endnotes. Adjacent hidden runs are merged, and hidden text over 200 characters is split into overlapping chunks |
+| image (P2) | PNG or JPEG (checked by magic bytes), at most 1600 × 1600 px. Text is read with tesseract.js (WebAssembly, model files bundled, no network) in `apps/web/lib/ocr-image.ts`; one reused worker, one job at a time, 20 s limit. All extracted text is treated as visible | — |
+
+**[DECISION]** An adapter signals bad input by throwing `IngestError`; `/inspect` turns it into a 400 with a message that is safe to show. A zip, a PDF or an image that fails to parse is never a 503.
+
+**[DECISION]** OCR is deterministic code, not a model, so a picture saying "ignore previous instructions" cannot talk its way past the extractor, and an image costs no LLM tokens. The investigator receives `visibleText` only, so hidden-layer text from a docx is caught by the deterministic rules, not by the LLM.
+
+**Hidden-segment offsets (docx):** they index a single running stream of the adapter's output (visible lines then hidden chunks). Nothing downstream reads hidden-segment offsets, only their excerpts.
 
 **[ASSUMPTION]** Only inline-style hiding is detected; hiding via external stylesheets is out of scope and documented as a known limitation.
 
@@ -435,7 +442,9 @@ None of the YAML files is read at runtime. They are hand-maintained documentatio
 
 | Item | Value [DECISION — adjust after measurement] |
 |---|---|
-| Max input size | 100 KB |
+| Max input size | 100 KB of content; for pdf, docx and image that is 100 KB of base64 (about 75 KB of file). **No larger cap for any type** (cost and latency) |
+| Binary input limits | pdf: 5 pages, 10 s read. docx: 200 zip entries, 2 MB per part. image: 1600 × 1600 px, 20 s OCR, one job at a time (about 220 MB of memory) |
+| Investigator input | At most 6,000 characters of the extracted text per call (the rules still scan all of it) |
 | Decode depth / decoded bytes | 3 / 50 KB |
 | Investigator | Max 4 investigative tool calls and 1 retry on invalid output (enforced); at most 12 model turns; `LLM_TIMEOUT_MS` (default 20 s) per model call. There is no overall wall-clock cap |
 | Protected agent | Enforced: at most 12 model turns per run, `LLM_TIMEOUT_MS` per model call, and the G6 rate limit on high-risk calls. **[ASSUMPTION — target, not enforced]** a total 45 s budget and a 6-tool-call cap per run: the code does not apply them (a run has made 8 calls) |
@@ -475,10 +484,10 @@ None of the YAML files is read at runtime. They are hand-maintained documentatio
 
 - English-only detection rules.
 - Hidden text via external CSS is not detected.
-- No OCR/image inputs (hence no D3 claim).
+- Image input is read by OCR, which misses some faint or heavy display-style text, and an image whose text cannot be read gives the firewall nothing to judge. The image suite is small (36 images); no D3 claim.
 - Rule detectors can be evaded by novel phrasing; the investigator reduces but does not eliminate this — measured rates are reported as-is.
 - Demo tools and secrets are simulated; approving a held action releases a simulated tool and does not resume the agent.
-- No Word-document (`docx`) support, and PDF is text layer only.
+- Word: hiding inherited from a style (rather than set on the run) is not seen, and text boxes are read as ordinary runs. The docx extractor was tested on generated files; **[ASSUMPTION]** it is not yet confirmed against a file saved by Word itself. PDF is text layer only, and a white-on-white PDF line is read as ordinary visible text.
 - Rate limiting is per serverless instance, not global.
 - The protected agent's 45 s / 6-call budget is a target the code does not enforce (§9).
 - The live demo model resists email injection on its own, so the guard is demonstrated with user-driven requests; the scripted tests cover a manipulated agent.
