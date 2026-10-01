@@ -20,7 +20,7 @@ Plan: [`plan.md`](plan.md). Approved 2026-10-02. **All work on `feat/document-im
 ## Phase 3: Demo UI for PDF and DOCX
 - [x] T7: Playground file upload + "what the firewall read" panel
 - [x] T8: Samples and upload e2e
-- [ ] Checkpoint C: verified on a Vercel preview. **Not done:** previews have no env vars (Production-only), so uploads were verified on a local production build against the dev DB (user chose local-only verification)
+- [x] Checkpoint C: verified on a Vercel preview (2026-10-02, branch-scoped Preview env vars: dev DB, rules-only). docx, real Word file, PDF and OCR images all correct. Found and fixed a PDF bug there (pdfjs worker path became a webpack module id). Ingest 1-5 ms for docx/PDF, ~110 ms warm and ~930 ms cold for OCR; total 1.6-3.8 s per request is mostly the app-to-database hop
 
 ## Phase 4: Images via OCR (only if T0 passed; start by 2026-10-05)
 - [x] T9: Image adapter (`image` type + DB migration, PNG/JPEG, caps)
