@@ -33,7 +33,7 @@ Stack: TypeScript end-to-end · pnpm monorepo · Next.js on Vercel Hobby · Supa
 ## Repository layout and import rules
 
 ```text
-packages/config         env + policy loading
+packages/config         env validation (rules and policies are implemented in code, not loaded from files)
 packages/firewall-core  stages ①–④ and ⑥ — NO network, NO framework, imports only config
 packages/agents         stages ⑤ ⑦ ⑧ + LLM providers — imports core + config
 packages/eval           dataset runner + metrics — imports agents
@@ -93,7 +93,7 @@ pnpm eval --mode rules_only --split tuning # evaluation (modes: rules_only | rul
 
 ## Environment
 
-- Copy `.env.example` to `.env.local`. The app refuses to boot on invalid config.
+- Copy `.env.example` to `.env.local`. The environment schema is validated on first use and throws on an invalid value; a missing LLM key or model degrades that role to rules-only (shown on `/health`) instead of stopping the app.
 - Two Supabase projects: **dev** (local work) and **demo** (deployed link).
 - Ollama is for local development and offline eval only — never selectable in the demo environment.
 
