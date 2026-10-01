@@ -13,6 +13,7 @@ export const metadata: Metadata = {
 };
 
 const NAV_LINKS = [
+  { href: "/dashboard", label: "Dashboard" },
   { href: "/playground", label: "Playground" },
   { href: "/agent", label: "Agent demo" },
   { href: "/scenarios", label: "Scenarios" },

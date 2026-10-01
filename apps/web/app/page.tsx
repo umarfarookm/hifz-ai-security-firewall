@@ -2,6 +2,11 @@ import Link from "next/link";
 
 const SCREENS = [
   {
+    href: "/dashboard",
+    title: "Dashboard",
+    description: "Live counters, the risk-band distribution, the latest events and the latest held-out results, all read from the audit log.",
+  },
+  {
     href: "/playground",
     title: "Playground",
     description: "Paste content, choose its type and source, and see the firewall's decision, score breakdown, and evidence in real time.",
