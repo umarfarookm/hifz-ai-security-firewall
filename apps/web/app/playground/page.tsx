@@ -8,7 +8,7 @@ import { ScoreBreakdown } from "../../components/score-breakdown.js";
 import { SignalsList } from "../../components/signals-list.js";
 import { VerdictCard } from "../../components/verdict-card.js";
 
-const CONTENT_TYPES = ["text", "markdown", "html", "email", "json", "pdf", "docx"] as const;
+const CONTENT_TYPES = ["text", "markdown", "html", "email", "json", "pdf", "docx", "image"] as const;
 type ContentType = (typeof CONTENT_TYPES)[number];
 
 /** Demo uploads are small by design (cost and latency). 74 KB of file is about 99 KB of base64, under the API's 100 KB cap. */
@@ -17,12 +17,17 @@ const MAX_FILE_BYTES = 74 * 1024;
 const FILE_SAMPLES = [
   { label: "Word: hidden instruction", file: "hidden-instruction.docx", note: "A Word memo with a hidden-font paragraph that tells the agent to forward the inbox." },
   { label: "Word: clean memo", file: "clean-memo.docx", note: "An ordinary memo with no hidden text." },
+  { label: "Image: attack screenshot", file: "injected-screenshot.png", note: "A PNG whose pixels say to ignore previous instructions. There is no text layer; the firewall reads it with OCR." },
+  { label: "Image: phishing card", file: "phishing-email-card.png", note: "A screenshot of an email asking for a password and API key." },
+  { label: "Image: clean note", file: "clean-note.png", note: "An ordinary meeting-change note as an image." },
   { label: "PDF: injected invoice", file: "injected-invoice.pdf", note: "A PDF invoice with an instruction in its visible text. PDFs have no hidden layer here, so it is caught as visible text." },
 ] as const;
 
-function fileContentType(name: string): "pdf" | "docx" | null {
+function fileContentType(name: string): "pdf" | "docx" | "image" | null {
   const lower = name.toLowerCase();
-  return lower.endsWith(".pdf") ? "pdf" : lower.endsWith(".docx") ? "docx" : null;
+  if (lower.endsWith(".pdf")) return "pdf";
+  if (lower.endsWith(".docx")) return "docx";
+  return /\.(png|jpe?g)$/.test(lower) ? "image" : null;
 }
 
 async function toBase64(file: Blob): Promise<string> {
@@ -36,6 +41,8 @@ interface AttachedFile {
   name: string;
   size: number;
   base64: string;
+  /** A data URL for showing an image upload as a thumbnail; null for documents. */
+  preview: string | null;
 }
 const SOURCES = ["user_message", "web_page", "email", "api_response", "document", "tool_output"] as const;
 
@@ -86,7 +93,7 @@ export default function PlaygroundPage() {
   async function attach(file: File | Blob, name: string, note: string | null = null) {
     const type = fileContentType(name);
     if (!type) {
-      setError({ error: "unsupported file", message: "Upload a .pdf or .docx file." });
+      setError({ error: "unsupported file", message: "Upload a .pdf, .docx, .png or .jpg file." });
       return;
     }
     if (file.size > MAX_FILE_BYTES) {
@@ -95,7 +102,9 @@ export default function PlaygroundPage() {
     }
     setError(null);
     setResult(null);
-    setAttached({ name, size: file.size, base64: await toBase64(file) });
+    const base64 = await toBase64(file);
+    const preview = type === "image" ? `data:${/\.png$/i.test(name) ? "image/png" : "image/jpeg"};base64,${base64}` : null;
+    setAttached({ name, size: file.size, base64, preview });
     setFileNote(note);
     setContentType(type);
     setSource("document");
@@ -135,7 +144,7 @@ export default function PlaygroundPage() {
     <div className="rise-in">
       <h1 className="text-xl font-medium tracking-tight text-ink">Playground</h1>
       <p className="mt-1.5 max-w-xl text-[13px] leading-relaxed text-ink-dim">
-        Paste content or upload a small PDF or Word file, and run it through the firewall pipeline — ingest → normalize → detect → score →
+        Paste content or upload a small PDF, Word file or image (PNG or JPEG), and run it through the firewall pipeline — ingest → normalize → detect → score →
         escalate.
       </p>
 
@@ -185,6 +194,9 @@ export default function PlaygroundPage() {
                   Remove
                 </button>
               </div>
+              {attached.preview && (
+                <img src={attached.preview} alt="The uploaded image" className="mt-3 max-h-40 rounded border border-line" data-testid="image-preview" />
+              )}
               {fileNote && <p className="mt-2 text-[12px] leading-relaxed text-ink-dim">{fileNote}</p>}
             </div>
           ) : (
@@ -200,7 +212,7 @@ export default function PlaygroundPage() {
               <div className="mt-2 text-[12px] text-ink-faint">
                 or{" "}
                 <button type="button" onClick={() => fileInput.current?.click()} className="text-accent hover:underline">
-                  upload a PDF or Word file
+                  upload a PDF, Word file or image
                 </button>{" "}
                 (up to {MAX_FILE_BYTES / 1024} KB)
               </div>
@@ -209,7 +221,7 @@ export default function PlaygroundPage() {
           <input
             ref={fileInput}
             type="file"
-            accept=".pdf,.docx"
+            accept=".pdf,.docx,.png,.jpg,.jpeg"
             data-testid="file-input"
             className="hidden"
             onChange={(e) => {
@@ -306,9 +318,12 @@ export default function PlaygroundPage() {
 
               {result.extracted && (
                 <div className="rounded-lg border border-line bg-surface p-5" data-testid="what-it-read">
-                  <div className="text-[11px] font-medium uppercase tracking-wide text-ink-faint">What the firewall read</div>
+                  <div className="text-[11px] font-medium uppercase tracking-wide text-ink-faint">What the firewall read{contentType === "image" ? " (by OCR)" : ""}</div>
                   <pre className="mt-2 max-h-48 overflow-auto whitespace-pre-wrap font-mono text-[12px] leading-relaxed text-ink">
-                    {result.extracted.visibleText || "(no visible text)"}
+                    {result.extracted.visibleText ||
+                      (contentType === "image"
+                        ? "(no readable text found in the image. The firewall can only judge text it can read.)"
+                        : "(no visible text)")}
                   </pre>
                   {result.extracted.hiddenText.length > 0 && (
                     <div className="mt-3">

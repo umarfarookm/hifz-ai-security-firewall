@@ -21,6 +21,7 @@ import {
 } from "@hifz/firewall-core";
 import type { InvestigatorTools, ModelGateway, VerdictCache } from "@hifz/agents";
 import { runEscalation } from "@hifz/agents";
+import { ingestImage } from "./ocr-image.js";
 import type { ReviewStore } from "./review-store.js";
 import type { AuditWriter } from "./audit.js";
 
@@ -32,11 +33,11 @@ const MAX_INPUT_BYTES = 100 * 1024;
 export const MAX_INVESTIGATOR_CHARS = 6000;
 /** How much extracted text the response echoes back for display. */
 const EXTRACTED_PREVIEW_CHARS = 4000;
-const BINARY_TYPES: ReadonlySet<string> = new Set(["pdf", "docx"]);
+const BINARY_TYPES: ReadonlySet<string> = new Set(["pdf", "docx", "image"]);
 
 const inspectRequestSchema = z.object({
   content: z.string().min(1),
-  contentType: z.enum(["text", "markdown", "html", "email", "json", "source_code", "pdf", "docx"]),
+  contentType: z.enum(["text", "markdown", "html", "email", "json", "source_code", "pdf", "docx", "image"]),
   source: z.enum(["user_message", "web_page", "email", "api_response", "document", "tool_output"]),
   origin: z.string().optional(),
   sessionId: z.string().optional(),
@@ -127,7 +128,7 @@ export async function runInspection(rawBody: unknown, deps: RunInspectionDeps): 
     const sessionId = await deps.audit.ensureSession(body.sessionId);
     const trust = trustFor(body.source);
 
-    const adapter = ingestAdapters[body.contentType as ContentType];
+    const adapter = body.contentType === "image" ? ingestImage : ingestAdapters[body.contentType as ContentType];
     if (!adapter) {
       return { kind: "validation_error", correlationId, issues: [`no ingest adapter for contentType "${body.contentType}" yet`] };
     }

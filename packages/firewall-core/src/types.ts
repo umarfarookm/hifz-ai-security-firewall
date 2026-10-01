@@ -11,7 +11,8 @@ export type ContentType =
   | "json"
   | "source_code"
   | "pdf"
-  | "docx";
+  | "docx"
+  | "image";
 
 export type ProvenanceSource =
   | "user_message"
