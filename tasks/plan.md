@@ -19,7 +19,9 @@ Outcome: a judge can upload a real `.pdf`, `.docx` or image in the Playground (o
 ## Architecture decisions
 **Shared**
 - **Bad files become a clean 400, not a 503:** new `IngestError`; `runInspection` maps it to `validation_error`.
-- **Size cap per content type:** keep 100 KB for text types; `pdf`/`docx` get **512 KB of base64**; `image` gets its own cap (decided at the spike, ≤ ~1 MB base64 plus a pixel cap). Enforced in `runInspection` after zod, before the adapter; well under Vercel's 4.5 MB body limit. Measured on the deployed function and lowered if slow.
+- **Small files only, by design (user requirement, 2026-10-02: keep performance and DeepSeek cost low).** **No cap increase.** `pdf`, `docx` and `image` all stay under the existing **100 KB base64 cap (≈ 75 KB file)**; PDFs ≤ **5 pages**; images ≤ **1600 × 1600 px**; committed demo samples < 30 KB. The cap is enforced in `runInspection` before the adapter, with a friendly client-side message. Demo and production use the same limits.
+- **DeepSeek cost controls.** (1) OCR is a local deterministic engine, so **images consume zero DeepSeek tokens**; no vision LLM is used. (2) Only extracted *text* ever reaches the investigator, and it is **truncated to ~6,000 characters** for the LLM call (the rules still scan the full extracted text, up to the cap); today a 100 KB text input would send ~25K tokens. (3) The investigator still runs only in the 20–70 band and results are cached by content hash; per-IP rate limits are unchanged.
+- **Performance controls.** Reuse one OCR worker per instance and run **one OCR job at a time** (memory ≈ 220 MB); measured: ~0.1 s per image warm, ~0.7 s cold. Adapter timeouts return a clean 4xx.
 - **Binary excerpt:** for `pdf`/`docx`/`image`, store `content_excerpt` as `[type, N KB] ` + the first 2,000 characters of the extracted text, not base64.
 - **Evidence honesty:** new inputs are **not** added to the evaluated held-out dataset (that would change published numbers and force a second held-out run). docx is covered by unit tests and real-file checks; images get a **separate, clearly-labelled mini-suite** reported on its own. The docs say "supported" and "measured on N cases", never more.
 - **The investigator receives `visibleText` only**, so text that exists only in a hidden layer (docx) is caught by the deterministic rules, not the LLM. Documented.
@@ -67,7 +69,7 @@ The OCR spike runs **first** (highest risk, decides whether Phase 4 exists). The
 
 ### Phase 1: Binary-input foundation (PDF and DOCX)
 - [ ] **T1: Bad files return a clean 400** (S): `IngestError`; `runInspection` maps it; pdf.ts wraps pdfjs failures. *Accept:* a corrupt PDF and non-PDF base64 return 400 with a readable message, not 503. *Verify:* unit tests; `pnpm test`. Files: `ingest/{types,pdf}.ts`, `apps/web/lib/inspect.ts`.
-- [ ] **T2: Per-type cap, PDF page cap/timeout, readable excerpt** (M): 512 KB for pdf/docx; ≤ 30 PDF pages; timeout; excerpt = label + extracted text. *Accept:* a 300 KB PDF is accepted, a 600 KB one returns 413, text types still capped at 100 KB; the event and review pages show readable text. *Verify:* unit tests; run a local 300 KB PDF and open `/events/{id}`. Deps: T1.
+- [ ] **T2: Small-file limits, LLM text cap, readable excerpt** (M): keep the 100 KB cap for every type (no raise); PDF ≤ 5 pages and a timeout; **truncate the text sent to the investigator to ~6,000 chars**; excerpt = label + extracted text. *Accept:* a 5-page PDF is accepted and a 6-page one returns a clear 4xx; a long input sends at most ~6,000 chars to the gateway (asserted with a recording gateway, so cost is bounded by a test); the event and review pages show readable text. *Verify:* unit tests; run a local PDF and open `/events/{id}`. Deps: T1.
 
 ### Checkpoint A
 - [ ] lint, typecheck, tests, `next build` green; `pnpm eval --mode rules_only --split tuning --skip-db` still **96.4% / 0.0%** (PDF behaviour unchanged).
@@ -89,7 +91,7 @@ The OCR spike runs **first** (highest risk, decides whether Phase 4 exists). The
 - [ ] After merge, upload each sample and a real Word file on **production**; measure p95 at the cap; lower the cap if slow; `/health` ok.
 
 ### Phase 4: Images via OCR (only if T0 passed; hard deadline: start by 5 Oct)
-- [ ] **T9: Image adapter** (M): `image` content type everywhere + migration; PNG/JPEG by magic bytes; pixel and size caps; worker reuse; async adapter returning OCR text (visible); low-confidence noted as an informational anomaly. *Accept:* a PNG screenshot containing "ignore previous instructions…" is flagged; a clean image is ALLOW; a corrupt or non-image file returns 400. *Verify:* unit tests with generated images; live call.
+- [ ] **T9: Image adapter** (M): `image` content type everywhere + migration; PNG/JPEG by magic bytes; ≤ 100 KB and ≤ 1600 px; one reused worker, one job at a time; **an `errorHandler` so a worker failure (e.g. a missing model) becomes a clean 400 and never an uncaught exception that crashes the function (found in the T0 spike)**; async adapter returning OCR text (visible); low-confidence noted as an informational anomaly. *Accept:* a PNG screenshot containing "ignore previous instructions…" is flagged; a clean image is ALLOW; a corrupt or non-image file returns 400. *Verify:* unit tests with generated images; live call.
 - [ ] **T10: Image UI** (M): image picker with thumbnail, the **OCR text shown** ("what the firewall read"), samples (an attack screenshot, a clean image), Playwright specs. Deps: T9, T7.
 - [ ] **T11: Image mini-suite (honest numbers)** (M): generate ~30 images with Playwright by rendering text (≥ 15 attacks across the 7 types in varied fonts, sizes and contrast; ≥ 15 legitimate) into `datasets/images/` as a **separate suite**, reported on its own (detection, false positives, OCR miss cases). **Do not tune detectors on it and do not merge it into the held-out set.** *Accept:* a recorded report and a plain-language summary of what OCR missed.
 
@@ -119,7 +121,8 @@ Phase 0 ≈ 0.5 day, Phase 1 ≈ 0.5, Phase 2 ≈ 1–1.5, Phase 3 ≈ 0.75, Pha
 | OCR misses faint or stylised attack text | High | Measured in T11; stated as a limitation; optional vision-LLM second opinion later |
 | An LLM transcription step is itself injectable | High | Not used as the extractor |
 | Zip bomb or malformed file hangs/crashes | High | Bounded inflation, limits, bomb fixtures, clean 400 |
-| pdfjs / OCR cold start and time at the cap | Med | Page and pixel caps, timeouts, measure on production, lower caps |
+| pdfjs / OCR cold start and time | Med | Small-file caps, page and pixel limits, timeouts, one OCR job at a time, measured on the branch preview |
+| DeepSeek cost grows with input size | Med | Images cost no LLM tokens; text sent to the investigator is capped at ~6,000 chars and asserted by a test |
 | Real Word run structure defeats the regex extractor | Med | Real Word-saved fixture (T5), run coalescing, documented limits |
 | False positives from white-on-dark tables | Med | Skip dark-shaded paragraphs/cells; negative fixtures |
 | Over-claiming (modalities, grid) | High | Separate mini-suite; docs say "measured on N"; claim decided at Checkpoint D |
@@ -127,7 +130,7 @@ Phase 0 ≈ 0.5 day, Phase 1 ≈ 0.5, Phase 2 ≈ 1–1.5, Phase 3 ≈ 0.75, Pha
 
 ## Decisions needed from the user
 1. **Approve adding `fflate`** to `packages/firewall-core` (CLAUDE.md requires asking; no zip reader exists and hand-rolling one is riskier).
-2. **Approve the 512 KB binary cap** for pdf/docx (measured and lowered if production is slow).
+2. ~~Approve the 512 KB binary cap~~ **Superseded by the user: small files only; the 100 KB cap stays, with a 5-page PDF limit and a 1600 px image limit.**
 3. **Images: go or no-go?** Recommended: **go, time-boxed behind the T0 spike**, with a hard cut by 5 Oct. If you would rather protect the schedule, choose no-go and keep Phases 1–3 + 5.
 4. **OCR approach:** server-side `tesseract.js` (recommended) vs a vision model. Confirms the choice of a deterministic extractor.
 5. **Grid claim:** stay F3 × D2 until image numbers exist, then decide at Checkpoint D.

@@ -3,11 +3,11 @@
 Plan: [`plan.md`](plan.md). Approved 2026-10-02. **All work on `feat/document-image-inputs`; `main` is untouched until the user decides to merge.** Verify on the branch preview, not production. Internal target 2026-10-10.
 
 ## Phase 0: De-risk (first)
-- [ ] T0: OCR-on-Vercel spike (tesseract.js, offline model, preview deployment). **Gate for Phase 4**
+- [~] T0: OCR-on-Vercel spike. Local production build passes (offline, 0.7 s cold). First preview failed on a symlink packaging error (fixed); re-verifying on the preview. **Gate for Phase 4**
 
 ## Phase 1: Binary-input foundation
 - [ ] T1: Bad files return a clean 400 (`IngestError`)
-- [ ] T2: Per-type size cap, PDF page cap and timeout, readable excerpt
+- [ ] T2: Small-file limits (100 KB, 5-page PDF), LLM text cap (~6,000 chars), readable excerpt
 - [ ] Checkpoint A: green build; tuning eval still 96.4% / 0.0%
 
 ## Phase 2: DOCX adapter
@@ -34,7 +34,7 @@ Plan: [`plan.md`](plan.md). Approved 2026-10-02. **All work on `feat/document-im
 
 ## Decisions and user tasks
 - [x] `fflate` dependency (approved with the plan)
-- [x] 512 KB binary cap (approved; measured, lowered if slow)
+- [x] Small files only (user, 2026-10-02): keep the 100 KB cap, PDF <= 5 pages, image <= 1600 px; no cap increase. DeepSeek cost bounded by a ~6,000-char LLM text cap
 - [x] Images: go, time-boxed behind T0
 - [x] Server-side `tesseract.js`, not an LLM extractor
 - [x] Grid claim stays F3 x D2 until image numbers exist
