@@ -267,6 +267,12 @@ The seeded inbox holds 6–8 synthetic emails: legitimate ones plus attack email
 
 Every transition is an audit event with reviewer id and comment.
 
+**Implementation [DECISION]:**
+- A review item is created by the server when a decision is REVIEW (`kind = content`, `ref_id` = the inspection id; `POST /inspect` returns it as `reviewId`) or when the Action Guard returns REQUIRE_APPROVAL (`kind = tool_call`, `ref_id` = the `tool_calls` id, which also gets `review_id` set). BLOCK outcomes do not create items: they are final.
+- EXPIRED is **derived on read** from `expires_at` (15 minutes), not stored and not driven by a background job. A decision is a single conditional update (`state = PENDING and expires_at > now`), so a late click or two reviewers racing cannot both succeed; the loser gets 409.
+- Approving a held tool call records the decision and states the simulated effect; the tool row itself is never rewritten, so the audit trail keeps what the guard originally decided. Rejecting or expiring means the action never runs.
+- Reading the queue is public (demo data only, like `GET /events`); deciding requires a reviewer.
+
 ---
 
 ## 4. API design (`/api/v1`, JSON, all responses include `correlationId`)
@@ -277,18 +283,18 @@ Every transition is an audit event with reviewer id and comment.
 | POST `/agent/run` | Run the email assistant on a user instruction (full pipeline + guard) | Public | Per IP, stricter |
 | GET `/events` | Paginated audit events (filters: band, action, attackType, since) | Public read (demo data only) | Per IP |
 | GET `/events/{id}` | Full evidence: signals, contributions, verdict, guard checks | Public read | Per IP |
-| GET `/reviews` | Pending review items | Reviewer | — |
-| POST `/reviews/{id}/decision` | Approve / reject with comment | Reviewer | — |
+| GET `/reviews` | The review queue (`?state=PENDING\|APPROVED\|REJECTED\|EXPIRED`, `?limit=`), newest first, each item with a summary of what it is about | Public read (demo data only) | Per IP |
+| POST `/reviews/{id}/decision` | Approve / reject with an optional comment (`{decision: "approve"\|"reject", comment?}`); 401 no/invalid token, 403 not a reviewer, 404 unknown id, 409 already decided or expired | Reviewer (`Authorization: Bearer <access token>`) | Per IP |
 | GET `/metrics` | Live counters (inspection totals by band and action) + the latest eval run per split (`heldout`, `tuning`) and mode (`rules_only`, `rules_llm`); `null` where no run exists | Public | Per IP |
 | GET `/scenarios` · POST `/scenarios/{id}/replay` | Pre-built demo scenarios, one per committed attack type; replay re-runs the scenario through the live `/inspect` pipeline (same rate-limit bucket, real audit event) **[DECISION — live replay instead of stored results, so every number shown is a real run and no extra table is needed]** | Public | Per IP |
 | GET `/health` | App, DB, and per-role LLM status (`ok` / `rules_only` / `misconfigured`); overall `status` is `degraded` if the DB is down or a role is misconfigured. Reports status only — the reason goes to the server log | Public | — |
 
 **POST /inspect — request:** `content`, `contentType`, `source`, `origin?`, `sessionId?`
-**Response:** `decision`, `finalBand`, `score`, `attackTypes[]`, `reason`, `sanitizedContent?`, `eventId`, `llmStatus`, `timings{}`, `contributions[]`, `signals[]`, `verdict?` — the last three added in task 2.10 so the Playground can render its score breakdown and evidence highlights from a single call, instead of a second round trip to `/events/{id}`.
+**Response:** `decision`, `finalBand`, `score`, `attackTypes[]`, `reason`, `sanitizedContent?`, `eventId`, `reviewId` (set when the decision is REVIEW), `llmStatus`, `timings{}`, `contributions[]`, `signals[]`, `verdict?` — the last three added in task 2.10 so the Playground can render its score breakdown and evidence highlights from a single call, instead of a second round trip to `/events/{id}`.
 
 **Errors:** `400` invalid input (schema errors listed) · `413` over size cap · `429` rate limited · `503` only if the core pipeline itself fails (an LLM failure never yields 503 — it degrades per §3.5).
 
-**Reviewer auth [DECISION]:** Supabase Auth email/password; reviewer accounts seeded; role checked server-side.
+**Reviewer auth [DECISION]:** Supabase Auth email/password. The reviewer role is `app_metadata.role = "reviewer"`, which only the service key can write (`pnpm --filter @hifz/eval run seed-reviewer`), so a self-registered user never has it; the server verifies the access token and the role on every decision. The browser holds only the public anon key, for sign-in. Disable public sign-ups in the Supabase project. The demo login is shared with judges privately, not in the repository.
 
 ---
 
