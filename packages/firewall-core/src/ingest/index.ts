@@ -1,3 +1,4 @@
+import { ingestDocx } from "./docx.js";
 import { ingestEmail } from "./email.js";
 import { ingestHtml } from "./html.js";
 import { ingestJson } from "./json.js";
@@ -15,9 +16,10 @@ export const ingestAdapters: IngestAdapterMap = {
   json: ingestJson,
   source_code: ingestSourceCode,
   pdf: ingestPdf,
+  docx: ingestDocx,
 };
 
-export { ingestText, ingestMarkdown, ingestHtml, ingestEmail, ingestJson, ingestSourceCode, ingestPdf };
+export { ingestText, ingestMarkdown, ingestHtml, ingestEmail, ingestJson, ingestSourceCode, ingestPdf, ingestDocx };
 export { IngestError } from "./types.js";
 export type { IngestResult, IngestAdapter, MapIngestAdapter, IngestAdapterMap } from "./types.js";
 export type { RawEmail } from "./email.js";

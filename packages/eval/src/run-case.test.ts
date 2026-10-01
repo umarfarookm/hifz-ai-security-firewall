@@ -99,6 +99,6 @@ describe("runCase", () => {
   });
 
   it("throws a clear error for a contentType with no ingest adapter", async () => {
-    await expect(runCase(evalCase({ contentType: "docx" }), { ...baseDeps, mode: "rules_only" })).rejects.toThrow(/no ingest adapter/);
+    await expect(runCase(evalCase({ contentType: "not_a_type" as never }), { ...baseDeps, mode: "rules_only" })).rejects.toThrow(/no ingest adapter/);
   });
 });
