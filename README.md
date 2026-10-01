@@ -11,6 +11,7 @@ Built for the ET AI Hackathon: Agentic Edition (Accenture), Problem 2 — *Agent
 | [`/scenarios`](https://hifz-ai-security-firewall.vercel.app/scenarios) → **Run all 7** | One scripted attack per attack type, each run live through the pipeline |
 | [`/playground`](https://hifz-ai-security-firewall.vercel.app/playground) | Paste any content; get the decision, score breakdown and highlighted evidence |
 | [`/agent`](https://hifz-ai-security-firewall.vercel.app/agent) | A protected email assistant. Every tool call it proposes passes through the Action Guard |
+| [`/reviews`](https://hifz-ai-security-firewall.vercel.app/reviews) | The review queue: content flagged for REVIEW and tool calls the guard held. Anyone can read it; approving or rejecting needs a reviewer login (provided with the submission) |
 | [`/evaluation`](https://hifz-ai-security-firewall.vercel.app/evaluation) | Detection and false-positive rates from the dataset runner, read from recorded runs |
 
 The agent's tools are simulated and its credentials are synthetic. Nothing here touches a real mailbox or a real secret.
@@ -42,7 +43,7 @@ flowchart LR
 - **Deterministic first.** Every input is parsed, normalized (Unicode, zero-width characters, homoglyphs, hidden HTML text, Base64/hex/URL layers) and run through rule detectors before any LLM sees it. That stage alone decides most cases, with a p95 under 3 ms.
 - **LLM only where it earns its place.** A model is called only when the score lands in an ambiguous band (20 to 70). It uses read-only tools and a schema-validated output, and it can only raise a verdict, never lower one.
 - **Defence in depth.** If malicious content slips past detection, a deterministic Action Guard checks each proposed tool call again, independent of any model.
-- **Fail safe, not fail open.** If the model is slow, out of quota, misconfigured or returns something invalid, the decision falls back to REVIEW. It is never silently ALLOW.
+- **Fail safe, not fail open.** If the model is slow, out of quota, misconfigured or returns something invalid, the decision falls back to REVIEW. It is never silently ALLOW. REVIEW items, and tool calls the guard holds for approval, go to a human review queue where an authenticated reviewer approves or rejects them; an item nobody decides in 15 minutes expires and counts as rejected.
 
 There is no separate backend. The UI and the pipeline live in one Next.js app, and each API route runs as its own Vercel serverless function. See [`docs/architecture/HLD.md`](docs/architecture/HLD.md) §5.1 for why that is the right shape for this project.
 
@@ -92,6 +93,7 @@ Supported input types: plain text, Markdown, HTML, email, JSON, source code (com
 - **A broken LLM setup degrades, it does not take the service down.** A missing key or model id makes the investigator fall back to rules-only with the fail-safe REVIEW, and `GET /health` reports it as `misconfigured`.
 - **No real secrets anywhere.** The demo agent's credentials are synthetic (`DEMO_FAKE_*`). Secret environment variables never use the `NEXT_PUBLIC_` prefix, and the Supabase service key is server-only.
 - **Database:** Row Level Security is on for every table; the browser never writes to it. Inspections are retained for 30 days (a scheduled job).
+- **Reviewer access:** deciding a review item needs a Supabase Auth account whose role is set server-side (`app_metadata`, writable only with the service key), checked on every request. Reading the queue is public, like the audit log. Approving a held action only releases a *simulated* tool.
 - **Abuse limits:** per-IP rate limits (10/min on `/inspect`, 3/min on `/agent/run`) and a 100 KB input cap. See the limitation below about how the rate limiter scales.
 
 The full trust-boundary model is in [`docs/architecture/HLD.md`](docs/architecture/HLD.md) §10.
@@ -139,6 +141,7 @@ Base path `/api/v1`. Every response carries a `correlationId`.
 | `POST /agent/run` | Run the protected email agent on an instruction |
 | `GET /scenarios`, `POST /scenarios/{id}/replay` | The seven scripted attacks; replay runs them live |
 | `GET /events`, `GET /events/{id}` | Audit events and their full evidence |
+| `GET /reviews`, `POST /reviews/{id}/decision` | The review queue (public read); approve or reject (reviewer login required) |
 | `GET /metrics` | Live counters and the latest eval run per split and mode |
 | `GET /health` | App, database and per-role LLM status |
 
@@ -206,6 +209,18 @@ Set the provider and model for each role in `.env.local`. Each role is independe
 - `ollama` is for local development and offline evaluation only; the config refuses it in the demo environment.
 - After changing a provider, run `pnpm --filter @hifz/agents run smoke` (one structured call) and `pnpm --filter @hifz/agents run investigate-smoke` (a full tool loop).
 
+### Reviewer account (optional)
+
+The review queue is readable without logging in. To try approving or rejecting, create a reviewer in your Supabase project (Authentication, Providers: enable Email and turn **off** public sign-ups), then:
+
+```bash
+export REVIEWER_EMAIL=you@example.com REVIEWER_PASSWORD='a-strong-password-12+'
+pnpm --filter @hifz/eval run seed-reviewer            # create, or reset the password
+pnpm --filter @hifz/eval run seed-reviewer -- --delete  # remove it
+```
+
+The role is stored in the account's server-controlled `app_metadata`, so signing up through the public auth endpoint never produces a reviewer. Sign in at `/reviews`.
+
 ### Everyday commands
 
 ```bash
@@ -255,7 +270,7 @@ After a deploy, check `GET /api/v1/health`: `status: "ok"` with both LLM roles `
 
 ## Known limitations
 
-- **No review queue yet.** REVIEW decisions and the Action Guard's REQUIRE_APPROVAL outcomes are recorded and shown, but there is no UI to approve or reject them.
+- **Review decisions are simulated.** Approving a held tool call releases a simulated tool, and expiry is evaluated when the queue is read, not by a background job.
 - **Rule-based detection can be evaded by novel phrasing.** Held-out detection is 79.4%, with role-play prompts the weakest case; the investigator helps with severity but does not close the gap.
 - **The live agent model resists injection on its own**, so in the demo the guard acts on user-driven requests (an outside recipient, a secret, a tainted send), not on a model that was fooled. The deterministic proof for a manipulated model is the scripted tests in `packages/agents/src/protected-agent/`.
 - **Input coverage:** English-only rules; hidden text from external stylesheets is not detected (inline styles are); no OCR or images; no Word documents; PDF is text layer only.
@@ -265,7 +280,7 @@ After a deploy, check `GET /api/v1/health`: `status: "ok"` with both LLM roles `
 
 ## Future work
 
-A reviewer queue with authenticated approve/reject and expiry; a shared-store rate limiter; a dashboard with band distribution and recent events; evaluating the live model on the full held-out set; detectors for persona role-play that do not raise false positives; a "simulated compromised model" mode to show the guard stopping an agent that was actually fooled; multi-language rules; session-level modelling for multi-step attacks.
+Notifications and reviewer assignment for the queue; a shared-store rate limiter; a dashboard with band distribution and recent events; evaluating the live model on the full held-out set; detectors for persona role-play that do not raise false positives; a "simulated compromised model" mode to show the guard stopping an agent that was actually fooled; multi-language rules; session-level modelling for multi-step attacks.
 
 ## Documentation
 

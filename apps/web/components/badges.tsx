@@ -40,3 +40,14 @@ export function ActionBadge({ action }: { action: PolicyAction }) {
 export function GuardBadge({ outcome }: { outcome: string }) {
   return <Chip dotClassName={GUARD_DOT[outcome] ?? "bg-ink-faint"}>{outcome.replace("_", " ")}</Chip>;
 }
+
+const REVIEW_DOT: Record<string, string> = {
+  PENDING: "bg-[color:var(--band-medium)]",
+  APPROVED: "bg-[color:var(--band-low)]",
+  REJECTED: "bg-[color:var(--band-critical)]",
+  EXPIRED: "bg-ink-faint",
+};
+
+export function ReviewStateBadge({ state }: { state: string }) {
+  return <Chip dotClassName={REVIEW_DOT[state] ?? "bg-ink-faint"}>{state}</Chip>;
+}

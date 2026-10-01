@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import type { ModelGateway, ModelGatewayMetadata, StructuredOutputRequest, StructuredOutputResult, ToolTurnRequest, ToolTurnResult } from "@hifz/agents";
 import { InMemoryAuditWriter } from "./audit.js";
+import { InMemoryReviewStore } from "./review-store.js";
 import { runInspection } from "./inspect.js";
 import { SCENARIOS, findScenario } from "./scenarios.js";
 
@@ -38,8 +39,10 @@ describe("scenarios", () => {
   // Rules-only (provider "none"): proves the shipped payloads are caught by the deterministic layer alone,
   // independent of any LLM, and are attributed to the attack type they claim to demonstrate.
   it.each(SCENARIOS)("$id is flagged as $attackType by the rules alone", async (scenario) => {
+    const audit = new InMemoryAuditWriter();
     const outcome = await runInspection(scenario.request, {
-      audit: new InMemoryAuditWriter(),
+      audit,
+      reviews: new InMemoryReviewStore(audit),
       gateway: new NoneGateway(),
       escalationBand: { min: 20, max: 70 },
       failureMode: "review",

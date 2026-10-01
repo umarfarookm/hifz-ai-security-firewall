@@ -17,6 +17,11 @@ const SCREENS = [
     description: "One scripted attack per committed type. Replay any of them, or all seven, through the live pipeline.",
   },
   {
+    href: "/reviews",
+    title: "Review queue",
+    description: "Content the firewall flagged and tool calls the Action Guard held. A reviewer approves or rejects; undecided items expire after 15 minutes.",
+  },
+  {
     href: "/evaluation",
     title: "Evaluation",
     description: "Detection and false-positive rates from the dataset runner, rules-only against rules + LLM, read from recorded runs.",

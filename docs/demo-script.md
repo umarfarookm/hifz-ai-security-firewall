@@ -23,9 +23,10 @@ Asking the agent to **follow instructions that are inside an email** ("do what t
 2. **Email an outside address**: G3 stops it.
 3. **Send after reading the inbox**: G5, the taint check.
 4. **Email the DB password**: G4, the outbound secret scan.
-5. Point at the pipeline trace on screen (each step shows the G1–G6 results), then open **Scenarios** and use **Run all 7** for the content-stage detections.
+5. **Close the loop:** after one of the held sends (outside address or after reading the inbox), open **Review queue**, sign in as the reviewer, and approve or reject it. Approve shows the simulated effect; reject keeps it blocked.
+6. Point at the pipeline trace on screen (each step shows the G1–G6 results), then open **Scenarios** and use **Run all 7** for the content-stage detections. A scenario that lands on REVIEW also appears in the queue.
 
 ## Caveats
 - The agent's `/agent/run` is rate-limited to 3 requests per minute per IP, so leave about 20 seconds between runs when recording.
-- `send_email` is simulated: a `REQUIRE_APPROVAL` outcome is shown in the trace but there is no review queue yet (PLAN 3.2), so it cannot be approved from the UI.
+- `send_email` is simulated. A `REQUIRE_APPROVAL` outcome creates an item in the review queue (`/reviews`); signing in as the reviewer and approving it only releases the simulated tool. Items expire after 15 minutes.
 - A model update at the provider can change how the agent behaves. Re-run the four prompts shortly before recording.

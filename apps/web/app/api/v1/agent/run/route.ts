@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { runAgentRun } from "../../../../../lib/agent-run.js";
-import { getAuditWriter, getEnv, getGateway, parseJsonBody, rateLimitOrNull } from "../../../../../lib/api-helpers.js";
+import { getAuditWriter, getEnv, getGateway, getReviewStore, parseJsonBody, rateLimitOrNull } from "../../../../../lib/api-helpers.js";
 
 /** Fixed per docs/architecture/LLD.md §9 ("3 req/min") — not derived from RATE_LIMIT_PER_IP_PER_MIN, which is /inspect's own limit. */
 const AGENT_RUN_RATE_LIMIT_PER_MIN = 3;
@@ -19,6 +19,7 @@ export async function POST(req: Request) {
   const body = await parseJsonBody(req);
   const outcome = await runAgentRun(body, {
     audit: getAuditWriter(),
+    reviews: getReviewStore(),
     gateway: getGateway("demo_agent"),
     knownSecrets: {
       ...(env.DEMO_FAKE_API_KEY === undefined ? {} : { apiKey: env.DEMO_FAKE_API_KEY }),

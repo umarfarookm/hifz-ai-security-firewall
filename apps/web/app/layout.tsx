@@ -16,6 +16,7 @@ const NAV_LINKS = [
   { href: "/playground", label: "Playground" },
   { href: "/agent", label: "Agent demo" },
   { href: "/scenarios", label: "Scenarios" },
+  { href: "/reviews", label: "Reviews" },
   { href: "/evaluation", label: "Evaluation" },
 ];
 
