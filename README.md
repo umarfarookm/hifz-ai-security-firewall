@@ -8,6 +8,7 @@ Built for the ET AI Hackathon: Agentic Edition (Accenture), Problem 2 — *Agent
 
 | Try this | What you see |
 |---|---|
+| [`/dashboard`](https://hifz-ai-security-firewall.vercel.app/dashboard) | Live counters, the risk-band distribution, the latest events and the latest held-out results, all read from the audit log |
 | [`/scenarios`](https://hifz-ai-security-firewall.vercel.app/scenarios) → **Run all 7** | One scripted attack per attack type, each run live through the pipeline |
 | [`/playground`](https://hifz-ai-security-firewall.vercel.app/playground) | Paste any content; get the decision, score breakdown and highlighted evidence |
 | [`/agent`](https://hifz-ai-security-firewall.vercel.app/agent) | A protected email assistant. Every tool call it proposes passes through the Action Guard |
@@ -278,11 +279,12 @@ After a deploy, check `GET /api/v1/health`: `status: "ok"` with both LLM roles `
 - **Input coverage:** English-only rules; hidden text from external stylesheets is not detected (inline styles are); no OCR or images; no Word documents; PDF is text layer only.
 - **Rate limiting is per serverless instance** (in-memory), so it catches abuse within one warm instance but is not a global limit. A shared store would fix this.
 - **LLM numbers are model-specific and not deterministic.** The held-out rules+LLM run used Gemini on a free tier; results can shift with the provider's model version.
+- **Two band colours are close.** The amber (MEDIUM) and orange (HIGH) risk-band colours are hard to tell apart for some viewers (ΔE 6.8, below the 15 floor of the data-visualisation validator). Every use pairs the colour with a text label and a fixed order, so the colour is never the only signal.
 - **Context Poisoning and Multi-Step Jailbreaks** are explicitly out of scope for the current claim.
 
 ## Future work
 
-Notifications and reviewer assignment for the queue; a shared-store rate limiter; a dashboard with band distribution and recent events; evaluating the live model on the full held-out set; detectors for persona role-play that do not raise false positives; a "simulated compromised model" mode to show the guard stopping an agent that was actually fooled; multi-language rules; session-level modelling for multi-step attacks.
+Notifications and reviewer assignment for the queue; a shared-store rate limiter; evaluating the live model on the full held-out set; detectors for persona role-play that do not raise false positives; a "simulated compromised model" mode to show the guard stopping an agent that was actually fooled; multi-language rules; session-level modelling for multi-step attacks.
 
 ## Documentation
 

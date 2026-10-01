@@ -455,7 +455,7 @@ None of the YAML files is read at runtime. They are hand-maintained documentatio
 | Review queue (`/reviews`) | Pending, decided and expired items with a live countdown; public read; reviewer sign-in to approve or reject with a comment | Built |
 | Evaluation (`/evaluation`) | Per-category table, FP and detection rate, rules-only vs rules+LLM for the held-out and tuning splits, LLM-failure count, live counters (total and by action) | Built |
 | Scenario replay (`/scenarios`) | One-click scripted attacks, one per committed type, run live through the pipeline; "Run all 7" | Built |
-| Dashboard | Band distribution, latest events | **Not built.** Only the counters on the Evaluation page exist; `GET /metrics` also returns a band breakdown that no screen renders |
+| Dashboard (`/dashboard`) | Stat tiles (total inspections, count and share per decision, reviews awaiting a decision), the risk-band distribution as four labelled bars from low to critical, the latest 10 events with links to their detail, and the latest held-out result per mode. Every figure is read from `GET /metrics`, `GET /events` and `GET /reviews`; it refreshes every 15 s and keeps the previous data on screen while it does | Built. The amber (MEDIUM) and orange (HIGH) band colours are close (ΔE 6.8 under normal vision, below the 15 floor of the data-viz validator), so every use pairs the colour with a text label and a fixed order; the colour is never the only signal |
 
 ---
 

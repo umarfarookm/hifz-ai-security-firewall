@@ -138,7 +138,7 @@ flowchart LR
 ```mermaid
 flowchart TB
   subgraph Vercel[Vercel — Next.js app]
-    UI[Web UI<br/>playground, agent demo, scenarios, review queue, evaluation, event detail]
+    UI[Web UI<br/>dashboard, playground, agent demo, scenarios, review queue, evaluation, event detail]
     API[API route handlers<br/>thin: auth, rate limit, orchestration]
   end
   subgraph Packages[Monorepo packages]
@@ -394,7 +394,7 @@ The detector set (version `detectors-v2`) and every calibration change are recor
 
 - Correlation ID per request, propagated through every stage and stored on the audit event.
 - Per-stage timing recorded on each inspection (ingest, normalize, detect, score, investigate).
-- The Evaluation page shows live counters derived from the audit table (`GET /metrics`) and the latest eval run per split and mode. `GET /health` reports the app, the database and each LLM role.
+- The Dashboard shows live counters, the risk-band distribution, the latest events and the latest held-out result, all derived from the audit table and the recorded eval runs (`GET /metrics`, `GET /events`, `GET /reviews`). The Evaluation page shows the full per-category report for each split and mode. `GET /health` reports the app, the database and each LLM role.
 
 ---
 
