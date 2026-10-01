@@ -11,6 +11,13 @@ loadDotenv({ path: "../../.env.local" });
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: true,
+  // tesseract.js starts a worker thread from files inside its own package; bundling it breaks those paths, so Next must
+  // load it from node_modules at runtime. The worker script and the offline wasm/model assets are not statically
+  // importable, so they are listed for file tracing explicitly (SPIKE: T0 of tasks/plan.md).
+  serverExternalPackages: ["tesseract.js"],
+  outputFileTracingIncludes: {
+    "/api/spike/ocr": ["./ocr-assets/**/*", "./public/spike/*", "./node_modules/tesseract.js/src/**/*", "./node_modules/tesseract.js/dist/**/*"],
+  },
   transpilePackages: ["@hifz/agents", "@hifz/config", "@hifz/firewall-core"],
   webpack: (config) => {
     // Our packages use TS's "Bundler" moduleResolution, so internal imports
