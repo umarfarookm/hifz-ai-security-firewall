@@ -23,6 +23,12 @@ export interface AuditWriter {
   /** Inserts the session row if it doesn't exist yet. Returns the resolved session UUID. */
   ensureSession(sessionId?: string): Promise<string>;
 
+  /**
+   * Cheapest real, READ-ONLY database round trip, for GET /health and the keep-alive cron. It must not write:
+   * the endpoint is public, and a write per call would let anyone grow a table by hitting it.
+   */
+  ping(): Promise<void>;
+
   writeInspection(record: InspectionRecord): Promise<string>;
   writeSignals(inspectionId: string, signals: Signal[]): Promise<void>;
   writeLlmVerdict(inspectionId: string, record: LlmVerdictRecord): Promise<void>;
@@ -148,6 +154,11 @@ export function partitionTriggeringIds(inspectionIds: string[], contentIds: stri
 
 export class SupabaseAuditWriter implements AuditWriter {
   constructor(private readonly client: SupabaseClient) {}
+
+  async ping(): Promise<void> {
+    const { error } = await this.client.from("sessions").select("id").limit(1);
+    if (error) throw new Error(`ping failed: ${error.message}`);
+  }
 
   async ensureSession(sessionId?: string): Promise<string> {
     const id = sessionId && UUID_PATTERN.test(sessionId) ? sessionId : randomUUID();
@@ -439,6 +450,12 @@ export class InMemoryAuditWriter implements AuditWriter {
   public readonly toolCalls: (ToolCallRecord & { id: string; createdAt: Date; reviewId?: string })[] = [];
   public readonly sessions = new Set<string>();
   private readonly sessionState = new Map<string, { risk: number; recentAttackTypes: string[]; lastActivityAt: Date }>();
+
+  pings = 0;
+
+  async ping(): Promise<void> {
+    this.pings++;
+  }
 
   async ensureSession(sessionId?: string): Promise<string> {
     const id = sessionId && UUID_PATTERN.test(sessionId) ? sessionId : randomUUID();

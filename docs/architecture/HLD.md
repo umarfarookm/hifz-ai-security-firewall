@@ -103,7 +103,7 @@ The most common question this stack gets: *why not Angular + Spring Boot, a dedi
 | What you get out of the box | Managed Postgres + an auto-generated REST API (PostgREST) + Auth (used directly for reviewer login, ADR-9) + a Studio UI for inspecting data live during the demo | Just a database — auth, an API layer, and an admin UI are all separate things we'd have to build or bolt on |
 | Serverless connection handling | Built for exactly this pattern (many short-lived serverless invocations) via PostgREST/pooling | A traditional Postgres connection limit is easy to exhaust from serverless functions opening/closing connections rapidly — needs its own pooler (e.g. RDS Proxy) to do safely |
 | Setup time | One CLI command per project, working in under a minute (PLAN task 1.4) | VPC, security groups, subnet routing, and a pooler to expose it safely to a serverless frontend |
-| Cost durability | Free tier with known, documented limits we've already planned around (500 MB storage, pauses after a week idle — a keep-alive schedule is planned, PLAN task 3.4, not yet built; §13) | RDS's free tier is time-limited (12 months on a new AWS account), then billed — a cost risk for a project with no budget |
+| Cost durability | Free tier with known, documented limits we've already planned around (500 MB storage, pauses after a week idle — kept active by a daily Vercel Cron ping, §13) | RDS's free tier is time-limited (12 months on a new AWS account), then billed — a cost risk for a project with no budget |
 | Underlying tech | It's still just Postgres — no proprietary lock-in beyond Auth/RLS, which are themselves just Postgres extensions and a thin auth service | — |
 
 **Hosting / deployment**
@@ -360,8 +360,8 @@ The detector set (version `detectors-v2`) and every calibration change are recor
 |---|---|
 | LLM timeout / quota exhausted / API error / invalid output (after one retry) | Investigator status `unavailable` or `invalid_output`. If the rule band is already ≥ MEDIUM the case becomes REVIEW (BLOCK if `LLM_FAILURE_MODE=block`); a LOW rule band falls through to the normal policy. Recorded as `llm_status` |
 | LLM misconfigured (missing API key or model id) | Treated as the `none` provider (the same fail-safe), logged once per role; `GET /health` reports the role as `misconfigured` and the overall status as `degraded`; the Agent demo returns 503 |
-| Database unavailable | `/inspect` returns 503: audit is required, so no unaudited decision is issued. `GET /health` reports `db: down` |
-| Cold start / paused DB | **[ASSUMPTION]** A keep-alive schedule is planned (PLAN task 3.4) but not built; free-tier projects pause after a week idle |
+| Database unavailable | `/inspect` returns 503: audit is required, so no unaudited decision is issued. `GET /health` reports `db: down` and returns HTTP 503 |
+| Cold start / paused DB | A Vercel Cron job (`apps/web/vercel.json`) calls `GET /api/v1/health` once a day. The health check is a read-only database query, so it keeps the free-tier project active without writing anything. If the database is down the call returns 503 and the cron run shows as failed. **[ASSUMPTION]** Supabase counts an API read as activity; that cannot be confirmed without waiting out the pause window |
 | Review item left undecided | Expires after 15 minutes and counts as rejected |
 | Decoder bomb (deep nesting) | Depth and size caps → flagged as suspicious |
 
@@ -385,7 +385,7 @@ The detector set (version `detectors-v2`) and every calibration change are recor
 | Demo | Vercel Hobby | Supabase **demo** project | DeepSeek (`deepseek-flash`, pay-as-you-go); Gemini free tier also supported. Ollama is refused when `APP_ENV=demo` | Judge-facing link |
 
 **[VERIFIED]** Vercel Hobby: functions up to 300 s and 2 GB memory; Hobby projects cannot connect to repos owned by GitHub organizations, so the repo lives under a personal account.
-**[VERIFIED]** Supabase free tier: 2 active projects; pauses after a week of inactivity, so a keep-alive schedule is needed (planned, PLAN task 3.4, not yet built).
+**[VERIFIED]** Supabase free tier: 2 active projects; pauses after a week of inactivity, so a daily Vercel Cron ping to `/api/v1/health` keeps it active. **[VERIFIED]** Vercel Hobby cron jobs run at most once per day, at any time within the scheduled hour, in UTC, and only on production deployments.
 **[DECISION]** Supabase MCP is used for development only, scoped to the dev project, read-only by default. Every schema change is committed as a migration file.
 
 ---
