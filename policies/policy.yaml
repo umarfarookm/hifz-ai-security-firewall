@@ -15,6 +15,8 @@ rules:
     when: "finalBand == 'HIGH' and sourceTrust == 'semi_trusted'"
     action: REVIEW
 
+  # NOTE: in the code (packages/firewall-core/src/policy/decide-policy.ts) POL-004 is evaluated FIRST, ahead of
+  # POL-001..003, so an LLM outage on a case whose rule band is already MEDIUM+ yields REVIEW even for HIGH/untrusted.
   - id: POL-004
     when: "llmStatus in ['unavailable', 'invalid_output', 'not_called'] and ruleBand >= 'MEDIUM'"
     action: REVIEW # or BLOCK, per LLM_FAILURE_MODE — see packages/agents/src/escalation/fail-safe.ts

@@ -38,6 +38,20 @@ detectors:
     layers: [visible, hidden, decoded]
     notes: '"override/replace your/the instructions", "your new task is to"'
 
+  - id: OVR-005
+    attackType: instruction_override
+    severity: high
+    confidence: 0.8
+    layers: [visible, hidden, decoded]
+    notes: '"ignore/disregard/bypass your guidelines/directions/rules/restrictions" — possessive form; deliberately excludes previous/prior/above/earlier, which OVR-001 owns (avoids double-counting one phrase)'
+
+  - id: OVR-006
+    attackType: instruction_override
+    severity: high
+    confidence: 0.75
+    layers: [visible, hidden, decoded]
+    notes: '"forget about all the previous information", "forget everything I have told you" — context-wipe framing'
+
   - id: ROL-001
     attackType: role_change
     severity: high
