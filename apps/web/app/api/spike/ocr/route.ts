@@ -17,7 +17,6 @@ export async function GET(req: Request) {
   try {
     const worker = await createWorker("eng", 1, {
       // Everything local: no CDN. If an asset is missing the worker fails instead of silently downloading.
-      workerPath: path.join(root, "node_modules/tesseract.js/src/worker-script/node/index.js"),
       corePath: path.join(root, "ocr-assets/core"),
       langPath: path.join(root, "ocr-assets/lang"),
       cachePath: "/tmp",

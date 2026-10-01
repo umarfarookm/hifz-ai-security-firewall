@@ -16,7 +16,9 @@ const nextConfig = {
   // importable, so they are listed for file tracing explicitly (SPIKE: T0 of tasks/plan.md).
   serverExternalPackages: ["tesseract.js"],
   outputFileTracingIncludes: {
-    "/api/spike/ocr": ["./ocr-assets/**/*", "./public/spike/*", "./node_modules/tesseract.js/src/**/*", "./node_modules/tesseract.js/dist/**/*"],
+    // Only real directories. Globbing into node_modules/tesseract.js goes through pnpm's symlink and makes Vercel reject
+    // the function ("files in symlinked directories"); file tracing already finds the worker script by its real path.
+    "/api/spike/ocr": ["./ocr-assets/**/*", "./public/spike/*"],
   },
   transpilePackages: ["@hifz/agents", "@hifz/config", "@hifz/firewall-core"],
   webpack: (config) => {
