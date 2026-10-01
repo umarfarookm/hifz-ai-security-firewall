@@ -42,7 +42,6 @@ export const envSchema = z
     SUPABASE_SERVICE_ROLE_KEY: z.string().min(1),
 
     RATE_LIMIT_PER_IP_PER_MIN: z.coerce.number().int().positive().default(10),
-    DEMO_REPLAY_MODE: z.coerce.boolean().default(false),
 
     DEMO_FAKE_API_KEY: z.string().optional(),
     DEMO_FAKE_DB_PASSWORD: z.string().optional(),
