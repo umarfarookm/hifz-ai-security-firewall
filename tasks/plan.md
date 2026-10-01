@@ -42,6 +42,12 @@ Outcome: a judge can upload a real `.pdf`, `.docx` or image in the Playground (o
 - Accept PNG and JPEG (by magic bytes), pixel cap, reject the rest with `IngestError`. Add `image` to `ContentType`, the zod enums, the eval schema and the DB enum (**needs a migration: `alter type content_type add value 'image'`**, applied to dev and demo).
 - **Known limitation, stated up front:** OCR reads what it can see. Faint or low-contrast text a vision model might read can be missed, so images are an *evasion surface by design*; the mini-suite measures it.
 
+## Branching and release (set by the user, 2026-10-02)
+**`main` is not touched**: it is the working, deployed app. All work lands on the long-lived branch **`feat/document-image-inputs`**, which branches off `main`. Phase PRs, if any, target *that* branch, never `main`. Verification uses the branch's **Vercel preview deployment** (and local runs), not production. Merging this branch into `main` is the user's decision, made after the whole feature is proven; until then production is unchanged. Consequences:
+- Checkpoint C and the "verify on production" steps become "verify on the branch preview".
+- The DB migration that adds `image` to the content-type enum is additive and backwards compatible (the live app never sends `image`), but it touches the shared demo project, so it is applied only on request and only when the image work is ready.
+- The unmerged `docs/input-formats-plan` branch only carried this plan; the plan now lives on the feature branch.
+
 ## Dependency graph
 ```
 spike: OCR on Vercel ──────────────────────────────────────────────────► (gates Phase 4)

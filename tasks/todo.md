@@ -1,6 +1,6 @@
 # Task list: document and image inputs
 
-Plan: [`plan.md`](plan.md). Approved 2026-10-02. Open PRs per phase. Internal target 2026-10-10.
+Plan: [`plan.md`](plan.md). Approved 2026-10-02. **All work on `feat/document-image-inputs`; `main` is untouched until the user decides to merge.** Verify on the branch preview, not production. Internal target 2026-10-10.
 
 ## Phase 0: De-risk (first)
 - [ ] T0: OCR-on-Vercel spike (tesseract.js, offline model, preview deployment). **Gate for Phase 4**
@@ -20,7 +20,7 @@ Plan: [`plan.md`](plan.md). Approved 2026-10-02. Open PRs per phase. Internal ta
 ## Phase 3: Demo UI for PDF and DOCX
 - [ ] T7: Playground file upload + "what the firewall read" panel
 - [ ] T8: Samples and upload e2e
-- [ ] Checkpoint C: production verified, p95 measured at the cap
+- [ ] Checkpoint C: verified on the branch preview, p95 measured at the cap
 
 ## Phase 4: Images via OCR (only if T0 passed; start by 2026-10-05)
 - [ ] T9: Image adapter (`image` type + DB migration, PNG/JPEG, caps)
