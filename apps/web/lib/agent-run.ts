@@ -3,6 +3,7 @@ import { z } from "zod";
 import type { ModelGateway, ProtectedAgentDeps, RunProtectedAgentResult } from "@hifz/agents";
 import { runProtectedAgent, SEEDED_INBOX, TOOL_REGISTRY } from "@hifz/agents";
 import type { AuditWriter } from "./audit.js";
+import type { ReviewStore } from "./review-store.js";
 
 const agentRunRequestSchema = z.object({
   instruction: z.string().min(1),
@@ -33,6 +34,8 @@ const G6_WINDOW_MINUTES = 5;
 
 export interface RunAgentDeps {
   audit: AuditWriter;
+  /** LLD §3.11 — a REQUIRE_APPROVAL guard outcome creates a PENDING item here. */
+  reviews: ReviewStore;
   /** Pass the raw createModelGateway("demo_agent", env) result — a "none"-provider gateway means the demo can't run at all. */
   gateway: ModelGateway;
   /** Synthetic secrets only (DEMO_FAKE_API_KEY / DEMO_FAKE_DB_PASSWORD in .env.example) — never real credentials (CLAUDE.md). */
@@ -80,7 +83,7 @@ export async function runAgentRun(rawBody: unknown, deps: RunAgentDeps): Promise
     });
 
     for (const call of result.toolCalls) {
-      await deps.audit.writeToolCall({
+      const toolCallId = await deps.audit.writeToolCall({
         sessionId,
         tool: call.tool,
         argsRedacted: call.args,
@@ -92,6 +95,7 @@ export async function runAgentRun(rawBody: unknown, deps: RunAgentDeps): Promise
         outcome: call.guardOutcome,
         checks: call.checks,
       });
+      if (call.guardOutcome === "REQUIRE_APPROVAL") await deps.reviews.createForToolCall(toolCallId);
     }
 
     return {

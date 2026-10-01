@@ -20,6 +20,7 @@ import {
 } from "@hifz/firewall-core";
 import type { InvestigatorTools, ModelGateway, VerdictCache } from "@hifz/agents";
 import { runEscalation } from "@hifz/agents";
+import type { ReviewStore } from "./review-store.js";
 import type { AuditWriter } from "./audit.js";
 
 const MAX_INPUT_BYTES = 100 * 1024;
@@ -42,6 +43,8 @@ export interface InspectResponseBody {
   reason: string;
   sanitizedContent: string | null;
   eventId: string;
+  /** Set when the decision is REVIEW: the queue item a reviewer will act on (GET /reviews). */
+  reviewId: string | null;
   llmStatus: LlmStatus;
   timings: Record<string, number>;
   /** Score breakdown — LLD §10's Playground screen. */
@@ -65,6 +68,8 @@ function trustFor(source: ProvenanceSource): TrustLevel {
 
 export interface RunInspectionDeps {
   audit: AuditWriter;
+  /** LLD §3.11 — a REVIEW decision creates a PENDING item here. */
+  reviews: ReviewStore;
   /** Pass the raw createModelGateway("investigator", env) result — a "none"-provider gateway is treated as rules-only. */
   gateway: ModelGateway;
   escalationBand: { min: number; max: number };
@@ -179,6 +184,8 @@ export async function runInspection(rawBody: unknown, deps: RunInspectionDeps): 
 
     await deps.audit.writeSignals(inspectionId, signals);
     await deps.audit.recordSessionActivity(sessionId, priorSession, riskAssessment.score, attackTypes);
+    // After the signals are written, so the queue item can show which attack types were detected.
+    const reviewId = policy.action === "REVIEW" ? await deps.reviews.createForContent(inspectionId) : null;
 
     if (escalation.verdict) {
       await deps.audit.writeLlmVerdict(inspectionId, {
@@ -201,6 +208,7 @@ export async function runInspection(rawBody: unknown, deps: RunInspectionDeps): 
         reason: policy.reason,
         sanitizedContent: policy.sanitizedContent,
         eventId: inspectionId,
+        reviewId,
         llmStatus: escalation.llmStatus,
         timings,
         contributions: riskAssessment.contributions,

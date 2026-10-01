@@ -5,6 +5,7 @@ import { loadEnv, type Env } from "@hifz/config";
 import { createServerSupabaseClient } from "./supabase-server.js";
 import { resolveGateway } from "./gateway.js";
 import { SupabaseAuditWriter, type AuditWriter } from "./audit.js";
+import { SupabaseReviewStore, type ReviewStore } from "./review-store.js";
 import { checkRateLimit } from "./rate-limit.js";
 import { SupabaseVerdictCache } from "./verdict-cache.js";
 
@@ -21,6 +22,12 @@ export function getAuditWriter(): AuditWriter {
 }
 
 /** Never throws on a config error — see resolveGateway. A misconfigured role gets the "none" (rules-only) gateway. */
+let cachedReviews: ReviewStore | null = null;
+export function getReviewStore(): ReviewStore {
+  cachedReviews ??= new SupabaseReviewStore(createServerSupabaseClient(getEnv()));
+  return cachedReviews;
+}
+
 export function getGateway(role: ModelRole): ModelGateway {
   return resolveGateway(role, getEnv()).gateway;
 }

@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { runInspection } from "../../../../lib/inspect.js";
-import { getAuditWriter, getEnv, getGateway, getVerdictCache, parseJsonBody, rateLimitOrNull } from "../../../../lib/api-helpers.js";
+import { getAuditWriter, getEnv, getGateway, getReviewStore, getVerdictCache, parseJsonBody, rateLimitOrNull } from "../../../../lib/api-helpers.js";
 
 /**
  * POST /api/v1/inspect — docs/architecture/LLD.md §4. Runs the full
@@ -17,6 +17,7 @@ export async function POST(req: Request) {
   const verdictCache = getVerdictCache();
   const outcome = await runInspection(body, {
     audit: getAuditWriter(),
+    reviews: getReviewStore(),
     gateway: getGateway("investigator"),
     escalationBand: { min: env.LLM_ESCALATION_BAND_MIN, max: env.LLM_ESCALATION_BAND_MAX },
     failureMode: env.LLM_FAILURE_MODE,

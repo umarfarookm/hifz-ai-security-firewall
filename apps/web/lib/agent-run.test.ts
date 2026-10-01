@@ -2,6 +2,7 @@ import { randomUUID } from "node:crypto";
 import { describe, expect, it } from "vitest";
 import type { ModelGateway, ModelGatewayMetadata, StructuredOutputRequest, StructuredOutputResult, ToolTurnRequest, ToolTurnResult } from "@hifz/agents";
 import { InMemoryAuditWriter } from "./audit.js";
+import { InMemoryReviewStore } from "./review-store.js";
 import { runAgentRun, type RunAgentDeps } from "./agent-run.js";
 
 class NoneGatewayDouble implements ModelGateway {
@@ -30,8 +31,10 @@ class ScriptedGateway implements ModelGateway {
 }
 
 function baseDeps(overrides: Partial<RunAgentDeps> = {}): RunAgentDeps {
+  const audit = (overrides.audit as InMemoryAuditWriter | undefined) ?? new InMemoryAuditWriter();
   return {
-    audit: new InMemoryAuditWriter(),
+    audit,
+    reviews: new InMemoryReviewStore(audit),
     gateway: new ScriptedGateway([{ kind: "no_tool_call", text: "Done, nothing needed doing." }]),
     knownSecrets: {},
     ...overrides,
@@ -138,5 +141,40 @@ describe("runAgentRun", () => {
       // The 4th high-risk call overall (1st in this run, but 4th for the session) should trip G6.
       expect(outcome.body.toolCalls[0]).toMatchObject({ tool: "send_email", guardOutcome: "REQUIRE_APPROVAL" });
     }
+  });
+
+  describe("review queue (LLD §3.11)", () => {
+    it("creates a PENDING review, linked to the tool call, when the guard requires approval", async () => {
+      const gateway = new ScriptedGateway([
+        { kind: "tool_calls", calls: [{ id: "c1", name: "send_email", argsJson: JSON.stringify({ to: "boss@gmail.com", subject: "Notes", body: "Summary of today." }) }] },
+        { kind: "tool_calls", calls: [{ id: "c2", name: "final_response", argsJson: JSON.stringify({ message: "done" }) }] },
+      ]);
+      const audit = new InMemoryAuditWriter();
+      const reviews = new InMemoryReviewStore(audit);
+      const outcome = await runAgentRun({ instruction: "email my notes to boss@gmail.com" }, baseDeps({ gateway, audit, reviews }));
+
+      expect(outcome.kind).toBe("success");
+      const call = audit.toolCalls.find((c) => c.tool === "send_email");
+      expect(call?.outcome).toBe("REQUIRE_APPROVAL");
+      expect(call?.reviewId).toBeTruthy();
+
+      const item = await reviews.get(call!.reviewId!);
+      expect(item).toMatchObject({ kind: "tool_call", state: "PENDING", refId: call!.id });
+      expect(item?.summary).toMatchObject({ type: "tool_call", tool: "send_email", to: "boss@gmail.com" });
+      expect((item?.summary as { failedCheck: { checkId: string } | null }).failedCheck?.checkId).toBe("G3");
+    });
+
+    it("creates no review for a call that is simply allowed or blocked", async () => {
+      const gateway = new ScriptedGateway([
+        { kind: "tool_calls", calls: [{ id: "c1", name: "read_secrets", argsJson: JSON.stringify({ name: "db_password" }) }] },
+        { kind: "tool_calls", calls: [{ id: "c2", name: "final_response", argsJson: JSON.stringify({ message: "done" }) }] },
+      ]);
+      const audit = new InMemoryAuditWriter();
+      const reviews = new InMemoryReviewStore(audit);
+      await runAgentRun({ instruction: "look up the db password" }, baseDeps({ gateway, audit, reviews, knownSecrets: { dbPassword: "hifz-demo-password" } }));
+
+      // read_secrets with no tainted context is allowed; either way nothing needs approval.
+      expect(await reviews.list({ limit: 10 })).toEqual([]);
+    });
   });
 });

@@ -436,7 +436,7 @@ export class InMemoryAuditWriter implements AuditWriter {
   public readonly inspections: (InspectionRecord & { id: string })[] = [];
   public readonly signals: { inspectionId: string; signals: Signal[] }[] = [];
   public readonly llmVerdicts: { inspectionId: string; record: LlmVerdictRecord }[] = [];
-  public readonly toolCalls: (ToolCallRecord & { id: string; createdAt: Date })[] = [];
+  public readonly toolCalls: (ToolCallRecord & { id: string; createdAt: Date; reviewId?: string })[] = [];
   public readonly sessions = new Set<string>();
   private readonly sessionState = new Map<string, { risk: number; recentAttackTypes: string[]; lastActivityAt: Date }>();
 
