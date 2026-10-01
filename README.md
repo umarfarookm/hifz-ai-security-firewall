@@ -268,6 +268,8 @@ Deployed on [Vercel](https://vercel.com) (free tier) with Root Directory set to 
 
 After a deploy, check `GET /api/v1/health`: `status: "ok"` with both LLM roles `ok` means the keys and models are valid. Manual deploy: `pnpm deploy`.
 
+**Keep-alive:** Supabase's free tier pauses a project after a week of inactivity. `apps/web/vercel.json` defines a Vercel Cron job that calls `/api/v1/health` once a day (05:17 UTC; free plans run at most daily, at any time within the hour). The health check is a read-only query, so it keeps the database active without writing anything, and it returns 503 if the database is down so a failed run is visible in the cron log. List it with `vercel crons ls`; run it on demand with `vercel crons run /api/v1/health`.
+
 ## Known limitations
 
 - **Review decisions are simulated.** Approving a held tool call releases a simulated tool, and expiry is evaluated when the queue is read, not by a background job.
