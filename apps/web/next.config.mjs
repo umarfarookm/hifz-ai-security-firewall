@@ -18,7 +18,13 @@ const nextConfig = {
   outputFileTracingIncludes: {
     // Only real directories. Globbing into node_modules/tesseract.js goes through pnpm's symlink and makes Vercel reject
     // the function ("files in symlinked directories"); file tracing already finds the worker script by its real path.
-    "/api/spike/ocr": ["./ocr-assets/**/*", "./public/spike/*"],
+    "/api/spike/ocr": [
+        "./ocr-assets/**/*",
+        "./public/spike/*",
+        // tesseract.js's Node worker ignores corePath and require()s the core from the package, so the .wasm files
+        // must ship. Real .pnpm directory (not the symlinked node_modules/tesseract.js) to avoid the Vercel symlink error.
+        "../../node_modules/.pnpm/tesseract.js-core@7.0.0/node_modules/tesseract.js-core/*.wasm",
+      ],
   },
   transpilePackages: ["@hifz/agents", "@hifz/config", "@hifz/firewall-core"],
   webpack: (config) => {
