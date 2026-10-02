@@ -7,7 +7,7 @@
  * catches abuse within a single warm instance, not globally across the
  * whole deployment. A fully correct version needs a shared store (Supabase
  * or similar), which is more latency and complexity than a hackathon demo
- * needs — see the "deliberately not building Redis" note in CLAUDE.md.
+ * needs — see the "no Redis unless a concrete bottleneck shows up" non-goal in docs/architecture/HLD.md §1.2.
  * This is a real, if partial, safety net — not a no-op — and worth
  * replacing with a shared-store version if this ever needs to hold up
  * under real abuse.

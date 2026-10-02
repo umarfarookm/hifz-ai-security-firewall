@@ -9,7 +9,7 @@ const TUNING_PERCENTAGE = 60;
  * (docs/architecture/LLD.md §7). Deterministic means the split never
  * changes just because cases were added or the file order changed — a
  * case's assignment depends only on its own id. Held-out cases are never
- * used to tune rules or thresholds (see CLAUDE.md's non-negotiable rules).
+ * used to tune rules or thresholds (see the evaluation architecture in docs/architecture/HLD.md §12).
  */
 export function computeSplit(caseId: string): SplitAssignment {
   const hash = createHash("sha256").update(caseId).digest("hex");

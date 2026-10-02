@@ -13,7 +13,7 @@ export class ModelGatewayConfigError extends Error {}
  * Builds the right ModelGateway for a role, based on validated env config.
  * Fails at construction time with a clear message rather than at the first
  * LLM call — consistent with "the app refuses to boot on invalid config"
- * (CLAUDE.md). We deliberately don't default *_MODEL to a hardcoded model
+ * (see Environment in the README). We deliberately don't default *_MODEL to a hardcoded model
  * ID: provider model names change often enough that a stale default is
  * worse than an explicit, loud error telling you to set one.
  */

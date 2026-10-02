@@ -3,7 +3,7 @@ import type { RiskAssessment, RiskBand, ScoreContribution, Signal, TrustLevel } 
 /**
  * Implements the scoring formula from docs/architecture/LLD.md §3.4.
  * Every constant here is an initial value — calibrate only on the tuning split
- * and record before/after numbers, per the non-negotiable rule in CLAUDE.md.
+ * and record before/after numbers, per the evaluation rule in docs/architecture/HLD.md §12.
  */
 
 const SEVERITY_BASE: Record<Signal["severity"], number> = {

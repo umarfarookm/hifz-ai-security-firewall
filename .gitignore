@@ -46,3 +46,10 @@ supabase/.temp/
 
 # local tool state
 /.claude/
+
+# Working papers kept locally, not published: the AI-assistant instruction file, internal task plans,
+# pitch preparation, and the organisers' problem statement (not ours to redistribute).
+/CLAUDE.md
+/tasks/
+/docs/demo-and-pitch.md
+/docs/official-problem-statement.pdf

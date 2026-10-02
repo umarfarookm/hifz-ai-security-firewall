@@ -42,7 +42,7 @@ Reason: a defensible, auditable implementation of the human-oversight requiremen
 
 **ADR-10 — One deployable app (Next.js UI + API routes as serverless functions), not a separate backend service**
 Rejected: a separately hosted agent/API service (e.g. a small Node server on Render/Fly) called by the Next.js frontend.
-Reason: `packages/agents` and `packages/firewall-core` are plain libraries with no server of their own — they only run inside a Vercel serverless function for the duration of one request. A separate backend would need its own always-on hosting (breaks the $0 constraint and the "no unnecessary microservices" rule in `CLAUDE.md`), would add a second deployment pipeline and a second place secrets can leak, and buys nothing the serverless model doesn't already provide at this project's traffic scale. See `docs/architecture/HLD.md` §5.1 for the request-flow diagram and full reasoning.
+Reason: `packages/agents` and `packages/firewall-core` are plain libraries with no server of their own — they only run inside a Vercel serverless function for the duration of one request. A separate backend would need its own always-on hosting (breaks the $0 constraint and the "no unnecessary microservices" non-goal in `docs/architecture/HLD.md` §1.2), would add a second deployment pipeline and a second place secrets can leak, and buys nothing the serverless model doesn't already provide at this project's traffic scale. See `docs/architecture/HLD.md` §5.1 for the request-flow diagram and full reasoning.
 
 **ADR-11 — Vercel for hosting**
 Rejected: AWS (EC2, ECS, or Lambda + API Gateway).

@@ -38,7 +38,7 @@ export interface RunAgentDeps {
   reviews: ReviewStore;
   /** Pass the raw createModelGateway("demo_agent", env) result — a "none"-provider gateway means the demo can't run at all. */
   gateway: ModelGateway;
-  /** Synthetic secrets only (DEMO_FAKE_API_KEY / DEMO_FAKE_DB_PASSWORD in .env.example) — never real credentials (CLAUDE.md). */
+  /** Synthetic secrets only (DEMO_FAKE_API_KEY / DEMO_FAKE_DB_PASSWORD in .env.example) — never real credentials (docs/architecture/HLD.md §10). */
   knownSecrets: { apiKey?: string; dbPassword?: string };
   timeoutMs?: number;
 }
