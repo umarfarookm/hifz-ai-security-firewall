@@ -58,9 +58,9 @@ function SplitSection({ title, note, runs }: { title: string; note: string; runs
         <table className="w-full text-left text-lg">
           <thead>
             <tr className="border-b border-line text-[15px] uppercase tracking-wide text-ink-faint">
-              <th className="px-5 py-4 font-bold">&nbsp;</th>
+              <th className="px-3 py-4 font-bold sm:px-5">&nbsp;</th>
               {MODES.map((m) => (
-                <th key={m.key} className="px-5 py-4 font-bold">
+                <th key={m.key} className="px-3 py-4 font-bold sm:px-5">
                   {m.label}
                 </th>
               ))}
@@ -68,62 +68,62 @@ function SplitSection({ title, note, runs }: { title: string; note: string; runs
           </thead>
           <tbody className="font-mono text-ink">
             <tr className="border-b border-line">
-              <td className="px-5 py-3.5 font-sans"><div className="font-bold text-ink">Detection rate</div><div className="text-[15px] text-ink-dim">Share of attacks we caught</div></td>
+              <td className="px-3 py-3.5 sm:px-5 font-sans"><div className="font-bold text-ink">Detection rate</div><div className="text-[15px] text-ink-dim">Share of attacks we caught</div></td>
               {MODES.map((m) => (
-                <td key={m.key} className="px-5 py-3.5">
+                <td key={m.key} className="px-3 py-3.5 sm:px-5">
                   {pct(runs[m.key]?.summary.overallDetectionRate)}
                 </td>
               ))}
             </tr>
             <tr className="border-b border-line">
-              <td className="px-5 py-3.5 font-sans"><div className="font-bold text-ink">False-positive rate</div><div className="text-[15px] text-ink-dim">Harmless items we wrongly flagged</div></td>
+              <td className="px-3 py-3.5 sm:px-5 font-sans"><div className="font-bold text-ink">False-positive rate</div><div className="text-[15px] text-ink-dim">Harmless items we wrongly flagged</div></td>
               {MODES.map((m) => (
-                <td key={m.key} className="px-5 py-3.5">
+                <td key={m.key} className="px-3 py-3.5 sm:px-5">
                   {pct(runs[m.key]?.summary.overallFalsePositiveRate)}
                 </td>
               ))}
             </tr>
             <tr className="border-b border-line">
-              <td className="px-5 py-3.5 font-sans"><div className="font-bold text-ink">Precision / recall</div><div className="text-[15px] text-ink-dim">Flags that were right / attacks found</div></td>
+              <td className="px-3 py-3.5 sm:px-5 font-sans"><div className="font-bold text-ink">Precision / recall</div><div className="text-[15px] text-ink-dim">Flags that were right / attacks found</div></td>
               {MODES.map((m) => (
-                <td key={m.key} className="px-5 py-3.5">
+                <td key={m.key} className="px-3 py-3.5 sm:px-5">
                   {runs[m.key] ? `${pct(runs[m.key]!.summary.precision)} / ${pct(runs[m.key]!.summary.recall)}` : "—"}
                 </td>
               ))}
             </tr>
             <tr className="border-b border-line">
-              <td className="px-5 py-3.5 font-sans"><div className="font-bold text-ink">Latency p50 / p95</div><div className="text-[15px] text-ink-dim">Typical time / slow-case time</div></td>
+              <td className="px-3 py-3.5 sm:px-5 font-sans"><div className="font-bold text-ink">Latency p50 / p95</div><div className="text-[15px] text-ink-dim">Typical time / slow-case time</div></td>
               {MODES.map((m) => (
-                <td key={m.key} className="px-5 py-3.5">
+                <td key={m.key} className="px-3 py-3.5 sm:px-5">
                   {runs[m.key] ? `${ms(runs[m.key]!.summary.latency.p50)} / ${ms(runs[m.key]!.summary.latency.p95)}` : "—"}
                 </td>
               ))}
             </tr>
             <tr className="border-b border-line">
-              <td className="px-5 py-3.5 font-sans"><div className="font-bold text-ink">LLM calls that failed safe</div><div className="text-[15px] text-ink-dim">Second opinions that failed, so we played it safe</div></td>
+              <td className="px-3 py-3.5 sm:px-5 font-sans"><div className="font-bold text-ink">LLM calls that failed safe</div><div className="text-[15px] text-ink-dim">Second opinions that failed, so we played it safe</div></td>
               {MODES.map((m) => {
                 const counts = runs[m.key]?.summary.llmStatusCounts;
                 const failed = counts ? (counts.unavailable ?? 0) + (counts.invalid_output ?? 0) : null;
                 return (
-                  <td key={m.key} className="px-5 py-3.5">
+                  <td key={m.key} className="px-3 py-3.5 sm:px-5">
                     {m.key === "rules_only" || failed === null ? "—" : failed}
                   </td>
                 );
               })}
             </tr>
             <tr className="border-b border-line text-[15px] text-ink-faint">
-              <td className="px-5 py-3.5 font-sans">Run</td>
+              <td className="px-3 py-3.5 sm:px-5 font-sans">Run</td>
               {MODES.map((m) => (
-                <td key={m.key} className="px-5 py-3.5 font-sans">
+                <td key={m.key} className="px-3 py-3.5 sm:px-5 font-sans">
                   <RunMeta run={runs[m.key]} />
                 </td>
               ))}
             </tr>
             {categories.map((category) => (
               <tr key={category} className="border-b border-line last:border-b-0">
-                <td className="px-5 py-3.5 font-sans text-ink-dim">{category}</td>
+                <td className="px-3 py-3.5 sm:px-5 font-sans text-ink-dim">{category}</td>
                 {MODES.map((m) => (
-                  <td key={m.key} className="px-5 py-3.5">
+                  <td key={m.key} className="px-3 py-3.5 sm:px-5">
                     {cell(runs[m.key], category)}
                   </td>
                 ))}

@@ -117,7 +117,7 @@ export default function DashboardPage() {
             <p className="mt-2 text-lg text-ink-dim">The final band after the investigator, for every inspection. Low is on top.</p>
             <ul className="mt-4 space-y-3">
               {bands.map((row) => (
-                <li key={row.band} className="grid grid-cols-[150px_1fr_auto] items-center gap-3" aria-label={`${row.band}: ${row.count} inspections, ${percent(row.share)}`}>
+                <li key={row.band} className="grid grid-cols-[124px_1fr_auto] sm:grid-cols-[150px_1fr_auto] items-center gap-3" aria-label={`${row.band}: ${row.count} inspections, ${percent(row.share)}`}>
                   <BandBadge band={row.band} />
                   <div className="h-3 w-full rounded-full bg-line" title={`${row.band}: ${row.count} (${percent(row.share, 1)})`}>
                     {row.count > 0 && (
@@ -145,7 +145,8 @@ export default function DashboardPage() {
             {data.events.length === 0 ? (
               <div className="mt-4 rounded-2xl border border-dashed border-line p-8 text-center text-[18px] text-ink-faint">No events recorded yet.</div>
             ) : (
-              <div className="mt-5 overflow-x-auto rounded-3xl border border-line bg-surface">
+              <>
+<div className="mt-5 hidden overflow-x-auto rounded-3xl border border-line bg-surface md:block">
                 <table className="w-full text-left text-lg">
                   <thead>
                     <tr className="border-b border-line text-[15px] uppercase tracking-wide text-ink-faint">
@@ -185,6 +186,27 @@ export default function DashboardPage() {
                   </tbody>
                 </table>
               </div>
+              {/* On a phone the same events are cards: a seven-column table cannot be read without scrolling sideways. */}
+              <div className="mt-5 space-y-3 md:hidden">
+                {data.events.map((event) => (
+                  <Link key={event.id} href={`/events/${event.id}`} className="block rounded-2xl border border-line bg-surface p-4 transition-colors hover:border-accent">
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <ActionBadge action={event.action} />
+                        <BandBadge band={event.finalBand} />
+                      </div>
+                      <span className="text-[16px] text-ink-dim">{relativeTime(event.createdAt, now)}</span>
+                    </div>
+                    <div className="mt-3 text-lg font-bold leading-snug text-ink">
+                      {event.attackTypes.length ? event.attackTypes.join(", ").replaceAll("_", " ") : "Nothing suspicious found"}
+                    </div>
+                    <div className="mt-1 text-[16px] text-ink-dim">
+                      {CONTENT_TYPE_PLAIN[event.contentType] ?? event.contentType} · score {event.score}
+                    </div>
+                  </Link>
+                ))}
+              </div>
+              </>
             )}
           </section>
 
