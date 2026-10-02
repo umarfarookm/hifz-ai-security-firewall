@@ -35,11 +35,14 @@ import type { MapIngestAdapter } from "./types.js";
 const require = createRequire(import.meta.url);
 const pdfjsLib = require("pdfjs-dist/legacy/build/pdf.js") as typeof import("pdfjs-dist/legacy/build/pdf.js");
 
-// pdfjs-dist's own internal relative-path lookup for its worker script
-// breaks once webpack bundles the calling code (Next.js server routes) —
-// resolving it here, from our own module, gives it a real filesystem path
-// that works regardless of how the caller got bundled.
-pdfjsLib.GlobalWorkerOptions.workerSrc = require.resolve("pdfjs-dist/legacy/build/pdf.worker.js");
+// pdfjs-dist normally loads its worker script from a file path (GlobalWorkerOptions.workerSrc). That cannot work once a
+// bundler has packed this module: webpack rewrites `require.resolve(...)` into a numeric module id, so on Vercel pdfjs
+// got `workerSrc = 46094` and failed with "Setting up fake worker failed: e.endsWith is not a function" (every PDF
+// upload answered 503). Instead, hand pdfjs the worker's message handler directly. Because it is a plain static
+// require, the bundler includes the worker file in the function and no path lookup is needed. workerSrc stays set only
+// to satisfy pdfjs's own check; it is never loaded when a handler is already present.
+(globalThis as { pdfjsWorker?: unknown }).pdfjsWorker = require("pdfjs-dist/legacy/build/pdf.worker.js");
+pdfjsLib.GlobalWorkerOptions.workerSrc = "pdfjs-dist/legacy/build/pdf.worker.js";
 
 export const ingestPdf: MapIngestAdapter = async (raw) => {
   const bytes = Buffer.from(raw, "base64");
