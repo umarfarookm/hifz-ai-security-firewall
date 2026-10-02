@@ -1,3 +1,5 @@
+import { ATTACK_PLAIN } from "./plain-labels.js";
+
 const SEVERITY_STYLES: Record<string, string> = {
   low: "text-[color:var(--band-low)]",
   medium: "text-[color:var(--band-medium)]",
@@ -21,31 +23,30 @@ export interface SignalLike {
 /** Evidence highlights (LLD §10, Playground + Event detail screens). */
 export function SignalsList({ signals }: { signals: SignalLike[] }) {
   if (signals.length === 0) {
-    return <p className="text-[13px] text-ink-faint">No rule detectors fired on this content.</p>;
+    return <p className="text-xl text-ink-dim">No rule detectors fired on this content.</p>;
   }
 
   return (
-    <div className="space-y-2">
+    <div className="space-y-4">
       {signals.map((signal, i) => (
-        <div key={`${signal.detectorId}-${i}`} className="rounded-lg border border-line bg-surface p-3.5">
-          <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-[11px]">
-            <span className="font-mono text-ink-dim">{signal.detectorId}</span>
+        <div key={`${signal.detectorId}-${i}`} className="rounded-2xl border border-line bg-surface p-5">
+          <div className="flex flex-wrap items-center gap-x-2.5 gap-y-1 text-[16px]">
+            <span className="font-mono font-bold text-ink">{signal.detectorId}</span>
             <span className="text-ink-faint">·</span>
-            <span className="text-ink-dim">{signal.attackType.replace(/_/g, " ")}</span>
+            <span className="font-bold text-ink">{signal.attackType.replace(/_/g, " ")}</span>
             <span className="text-ink-faint">·</span>
-            <span className={`${SEVERITY_STYLES[signal.severity] ?? "text-ink-dim"} font-medium uppercase tracking-wide`}>
-              {signal.severity}
-            </span>
+            <span className={`${SEVERITY_STYLES[signal.severity] ?? "text-ink-dim"} font-bold uppercase tracking-wide`}>{signal.severity}</span>
             <span className="text-ink-faint">·</span>
-            <span className="text-ink-faint">{Math.round(signal.confidence * 100)}%</span>
+            <span className="text-ink-dim">{Math.round(signal.confidence * 100)}% sure</span>
           </div>
+          {ATTACK_PLAIN[signal.attackType] && <p className="mt-2 text-lg text-ink-dim">{ATTACK_PLAIN[signal.attackType]}</p>}
           {signal.evidence.length > 0 && (
-            <div className="mt-2.5 flex flex-wrap gap-1.5">
+            <div className="mt-3 flex flex-wrap gap-2">
               {signal.evidence.map((span, j) => (
                 <mark
                   key={j}
-                  className="rounded border border-[color:var(--band-medium)]/25 bg-[color:var(--band-medium)]/10 px-1.5 py-0.5 font-mono text-[11px] text-[color:var(--band-medium)]"
-                  title={`layer: ${span.layer}`}
+                  className="max-w-full break-words [overflow-wrap:anywhere] rounded-lg border border-[color:var(--band-medium)]/30 bg-[color:var(--band-medium)]/10 px-2.5 py-1 font-mono text-[16px] text-ink"
+                  title={`found in the ${span.layer} text`}
                 >
                   {span.excerpt}
                 </mark>

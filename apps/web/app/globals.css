@@ -1,43 +1,60 @@
 @import "tailwindcss";
 
+/*
+ * Light theme, Neon Orange + Porcelain. Orange is for fills, icons and the active menu item only: orange text on porcelain is
+ * 2.9:1 and white on orange is 3.0:1, so buttons carry ink text (5.7:1) and small text links use --color-link (5.1:1).
+ */
 @theme {
-  --color-canvas: #08080a;
-  --color-surface: #0e0e11;
-  --color-surface-raised: #131316;
-  --color-line: rgba(255, 255, 255, 0.08);
-  --color-line-strong: rgba(255, 255, 255, 0.14);
-  --color-ink: #ededf0;
-  --color-ink-dim: #8b8b95;
-  --color-ink-faint: #56565f;
-  --color-accent: #6e6bf4;
-  --color-accent-dim: #4b48b0;
+  --color-canvas: #fffcf4;
+  --color-surface: #ffffff;
+  --color-surface-raised: #fff7e8;
+  --color-line: #e8ddcb;
+  --color-line-strong: #cdbfa9;
+  --color-ink: #1f1a17;
+  --color-ink-dim: #5b524a;
+  --color-ink-faint: #6f655c;
+  --color-accent: #ff6115;
+  --color-accent-hover: #e5500a;
+  --color-accent-tint: #ffebdd;
+  --color-link: #c2410c;
 
-  --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+  --font-sans: var(--font-figtree), ui-sans-serif, system-ui, sans-serif;
   --font-mono: var(--font-mono-stack), ui-monospace, "SF Mono", Menlo, monospace;
 }
 
+/* Risk bands: dark enough to read as text on porcelain and white. Always shown with a word or icon, never colour alone. */
 :root {
-  --band-low: #3fb974;
-  --band-medium: #d9a441;
-  --band-high: #dd8a4a;
-  --band-critical: #e0625f;
+  --band-low: #0b6b3a;
+  --band-medium: #8a5300;
+  --band-high: #b34700;
+  --band-critical: #a31b1b;
 }
 
 body {
   background-color: var(--color-canvas);
-  background-image: radial-gradient(ellipse 900px 500px at 50% -10%, rgba(110, 107, 244, 0.09), transparent);
-  background-repeat: no-repeat;
   color: var(--color-ink);
-  font-feature-settings: "cv11", "ss01";
+  font-size: 18px;
+  line-height: 1.55;
 }
 
 ::selection {
-  background-color: rgba(110, 107, 244, 0.35);
+  background-color: rgba(255, 97, 21, 0.3);
 }
 
-code,
-pre {
-  font-family: var(--font-mono);
+@layer base {
+  code,
+  pre {
+    font-family: var(--font-mono);
+  }
+}
+
+a:focus-visible,
+button:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible {
+  outline: 3px solid var(--color-ink);
+  outline-offset: 3px;
 }
 
 @keyframes rise-in {
@@ -53,4 +70,10 @@ pre {
 
 .rise-in {
   animation: rise-in 0.32s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .rise-in {
+    animation: none;
+  }
 }

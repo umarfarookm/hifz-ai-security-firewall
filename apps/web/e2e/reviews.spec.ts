@@ -17,7 +17,7 @@ test.describe("Review queue", () => {
   test("a REVIEW decision in the Playground links to the queue", async ({ page }) => {
     await page.goto("/playground");
     await page.getByRole("button", { name: "Instruction override" }).click();
-    await page.getByRole("button", { name: "Run inspection" }).click();
+    await page.getByRole("button", { name: "Check it" }).click();
     // A semi-trusted user message at HIGH is a REVIEW decision, which creates a queue item.
     await expect(page.getByRole("link", { name: "Open the review queue →" })).toBeVisible({ timeout: 30_000 });
   });

@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import type { InspectResponseBody } from "../../lib/inspect.js";
 import type { Scenario } from "../../lib/scenarios.js";
+import { ATTACK_PLAIN, CONTENT_TYPE_PLAIN, SOURCE_PLAIN } from "../../components/plain-labels.js";
 import { ActionBadge, BandBadge } from "../../components/badges.js";
 
 type RunState = { status: "running" } | { status: "done"; result: InspectResponseBody } | { status: "error"; message: string };
@@ -45,66 +46,70 @@ export default function ScenariosPage() {
 
   return (
     <div className="rise-in">
-      <div className="flex items-end justify-between gap-6">
+      <div className="flex flex-wrap items-end justify-between gap-6">
         <div>
-          <h1 className="text-xl font-medium tracking-tight text-ink">Scenarios</h1>
-          <p className="mt-1.5 max-w-xl text-[13px] leading-relaxed text-ink-dim">
-            One scripted attack per committed type. Each replay runs the payload through the live pipeline and records a real audit event.
+          <h1 className="text-5xl font-extrabold leading-[1.08] tracking-tight text-ink sm:text-6xl">Scenarios</h1>
+          <p className="mt-5 max-w-3xl text-2xl leading-relaxed text-ink-dim">
+            One ready-made attack for each of the seven types we catch. Press Run to send it through the real firewall and see what happens. Each run is recorded in the audit log.
           </p>
         </div>
         <button
           type="button"
           onClick={replayAll}
           disabled={!scenarios || runningAll}
-          className="shrink-0 rounded-md bg-ink px-4 py-2 text-[13px] font-medium text-canvas transition-opacity duration-150 hover:opacity-85 disabled:cursor-not-allowed disabled:opacity-30"
+          className="inline-flex h-16 shrink-0 items-center rounded-2xl bg-accent px-8 text-2xl font-bold text-ink transition-colors duration-150 hover:bg-accent-hover disabled:cursor-not-allowed disabled:opacity-30"
         >
           {runningAll ? "Running…" : "Run all 7"}
         </button>
       </div>
 
-      {loadError && <p className="mt-8 text-[13px] text-[color:var(--band-critical)]">Could not load scenarios: {loadError}</p>}
+      {loadError && <p className="mt-8 text-[18px] text-[color:var(--band-critical)]">Could not load scenarios: {loadError}</p>}
 
-      <div className="mt-9 grid grid-cols-1 gap-4 md:grid-cols-2">
+      <div className="mt-10 grid grid-cols-1 gap-6 md:grid-cols-2">
         {scenarios?.map((scenario) => {
           const run = runs[scenario.id];
           return (
-            <section key={scenario.id} className="flex flex-col rounded-lg border border-line bg-surface p-5">
+            <section key={scenario.id} className="flex flex-col rounded-3xl border border-line bg-surface p-6 sm:p-7">
               <div className="flex items-start justify-between gap-3">
                 <div>
-                  <h2 className="text-[14px] font-medium text-ink">{scenario.title}</h2>
-                  <p className="mt-1 text-[12px] leading-relaxed text-ink-dim">{scenario.description}</p>
+                  <h2 className="text-2xl font-extrabold tracking-tight text-ink">{scenario.title}</h2>
+                  <p className="mt-2 text-lg leading-relaxed text-ink-dim">{scenario.description}</p>
                 </div>
                 <button
                   type="button"
                   onClick={() => replay(scenario.id)}
                   disabled={run?.status === "running"}
-                  className="shrink-0 rounded-md border border-line px-3 py-1 text-[12px] text-ink-dim transition-colors duration-150 hover:border-line-strong hover:text-ink disabled:opacity-40"
+                  className="inline-flex h-12 shrink-0 items-center rounded-xl border-2 border-line-strong px-5 text-lg font-bold text-ink transition-colors duration-150 hover:border-accent hover:bg-accent-tint disabled:opacity-40"
                 >
                   {run?.status === "running" ? "Running…" : "Run"}
                 </button>
               </div>
 
-              <pre className="mt-4 max-h-28 overflow-auto whitespace-pre-wrap break-words rounded-md border border-line bg-canvas p-3 font-mono text-[11px] leading-relaxed text-ink-dim">
+              <div className="mt-5 text-[16px] font-bold text-ink">The attack</div>
+              <pre className="mt-2 max-h-36 overflow-auto whitespace-pre-wrap break-words [overflow-wrap:anywhere] rounded-2xl border border-line bg-canvas p-4 font-mono text-[15px] leading-relaxed text-ink">
                 {scenario.request.content}
               </pre>
-              <div className="mt-1.5 font-mono text-[11px] text-ink-faint">
-                {scenario.request.contentType} · {scenario.request.source}
+              <div className="mt-2 text-[16px] text-ink-dim">
+                {CONTENT_TYPE_PLAIN[scenario.request.contentType] ?? scenario.request.contentType}, sent as {SOURCE_PLAIN[scenario.request.source] ?? scenario.request.source}
               </div>
 
-              {run?.status === "error" && <p className="mt-4 text-[12px] text-[color:var(--band-critical)]">{run.message}</p>}
+              {run?.status === "error" && <p className="mt-4 text-lg text-[color:var(--band-critical)]">{run.message}</p>}
 
               {run?.status === "done" && (
-                <div className="mt-4 space-y-2 border-t border-line pt-4">
+                <div className="mt-5 space-y-3 border-t border-line pt-5">
                   <div className="flex flex-wrap items-center gap-2">
                     <ActionBadge action={run.result.decision} />
                     <BandBadge band={run.result.finalBand} />
-                    <span className="font-mono text-[12px] text-ink-dim">score {run.result.score}</span>
+                    <span className="text-[17px] font-bold text-ink-dim">risk {run.result.score} out of 100</span>
                   </div>
-                  <div className="text-[12px] text-ink-dim">{run.result.reason}</div>
+                  <div className="text-lg leading-relaxed text-ink">{run.result.reason}</div>
                   {run.result.attackTypes.length > 0 && (
-                    <div className="font-mono text-[11px] text-ink-faint">detected: {run.result.attackTypes.join(", ")}</div>
+                    <div className="text-[16px] text-ink-dim">
+                      <div className="font-mono">detected: {run.result.attackTypes.join(", ")}</div>
+                      {run.result.attackTypes.map((t) => (ATTACK_PLAIN[t] ? <div key={t}>{ATTACK_PLAIN[t]}</div> : null))}
+                    </div>
                   )}
-                  <Link href={`/events/${run.result.eventId}`} className="inline-block text-[12px] text-accent hover:underline">
+                  <Link href={`/events/${run.result.eventId}`} className="inline-flex min-h-11 items-center text-lg font-bold text-link hover:underline">
                     View full event →
                   </Link>
                 </div>

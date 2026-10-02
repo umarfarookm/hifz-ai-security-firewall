@@ -1,9 +1,9 @@
 "use client";
 
 import { useRef, useState } from "react";
-import Link from "next/link";
 import type { InspectResponseBody } from "../../lib/inspect.js";
-import { ActionBadge } from "../../components/badges.js";
+import { HowWeChecked } from "../../components/how-we-checked.js";
+import { VerdictBanner } from "../../components/verdict-banner.js";
 import { ScoreBreakdown } from "../../components/score-breakdown.js";
 import { SignalsList } from "../../components/signals-list.js";
 import { VerdictCard } from "../../components/verdict-card.js";
@@ -74,9 +74,31 @@ interface ApiError {
   correlationId?: string;
 }
 
-const fieldLabel = "text-[11px] uppercase tracking-wide text-ink-faint";
+const CONTENT_LABEL: Record<ContentType, string> = {
+  text: "Plain text",
+  markdown: "Markdown",
+  html: "Web page (HTML)",
+  email: "Email",
+  json: "Data (JSON)",
+  pdf: "PDF document",
+  docx: "Word document",
+  image: "Picture (PNG or JPEG)",
+};
+
+const SOURCE_LABEL: Record<(typeof SOURCES)[number], string> = {
+  user_message: "A message someone typed",
+  web_page: "A web page",
+  email: "An email",
+  api_response: "Another app or API",
+  document: "A document or file",
+  tool_output: "The output of a tool",
+};
+
+const fieldLabel = "block text-lg font-bold text-ink";
 const fieldControl =
-  "mt-1.5 w-full rounded-md border border-line bg-surface px-3 py-2 text-[13px] text-ink outline-none transition-colors duration-150 focus:border-accent/50";
+  "mt-2 h-14 w-full rounded-xl border-2 border-line-strong bg-surface px-4 text-lg text-ink transition-colors focus:border-accent";
+const chip =
+  "inline-flex min-h-12 items-center rounded-xl border-2 border-line bg-surface px-4 text-[17px] font-semibold text-ink transition-colors hover:border-accent hover:bg-accent-tint";
 
 export default function PlaygroundPage() {
   const [content, setContent] = useState<string>(EXAMPLES[0].content);
@@ -88,9 +110,30 @@ export default function PlaygroundPage() {
   const [error, setError] = useState<ApiError | null>(null);
   const [attached, setAttached] = useState<AttachedFile | null>(null);
   const [fileNote, setFileNote] = useState<string | null>(null);
+  /** True while a file is being read or a sample is being fetched, so "Check it" cannot run on the wrong content. */
+  const [attaching, setAttaching] = useState(false);
   const fileInput = useRef<HTMLInputElement>(null);
 
   async function attach(file: File | Blob, name: string, note: string | null = null) {
+    setAttaching(true);
+    try {
+      await attachFile(file, name, note);
+    } finally {
+      setAttaching(false);
+    }
+  }
+
+  async function loadSample(file: string, note: string) {
+    setAttaching(true);
+    try {
+      const res = await fetch(`/samples/${file}`);
+      await attachFile(await res.blob(), file, note);
+    } finally {
+      setAttaching(false);
+    }
+  }
+
+  async function attachFile(file: File | Blob, name: string, note: string | null) {
     const type = fileContentType(name);
     if (!type) {
       setError({ error: "unsupported file", message: "Upload a .pdf, .docx, .png or .jpg file." });
@@ -142,220 +185,202 @@ export default function PlaygroundPage() {
 
   return (
     <div className="rise-in">
-      <h1 className="text-xl font-medium tracking-tight text-ink">Playground</h1>
-      <p className="mt-1.5 max-w-xl text-[13px] leading-relaxed text-ink-dim">
-        Paste content or upload a small PDF, Word file or image (PNG or JPEG), and run it through the firewall pipeline — ingest → normalize → detect → score →
-        escalate.
+      <h1 className="text-5xl font-extrabold leading-[1.08] tracking-tight text-ink sm:text-6xl">Playground</h1>
+      <p className="mt-5 max-w-3xl text-2xl leading-relaxed text-ink-dim">
+        Add a message, a document or a picture. We look for hidden commands that try to take over an AI assistant, before it ever reads them.
       </p>
 
-      <div className="mt-9 grid grid-cols-1 gap-10 lg:grid-cols-2">
-        <div>
-          <div className="flex flex-wrap gap-1.5">
-            {EXAMPLES.map((ex) => (
-              <button
-                key={ex.label}
-                type="button"
-                onClick={() => {
-                  setContent(ex.content);
-                  setContentType(ex.contentType);
-                  setSource(ex.source);
-                }}
-                className="rounded-md border border-line px-2.5 py-1 text-[12px] text-ink-dim transition-colors duration-150 hover:border-line-strong hover:text-ink"
-              >
-                {ex.label}
-              </button>
-            ))}
-          </div>
-
-          <div className="mt-2 flex flex-wrap gap-1.5">
-            {FILE_SAMPLES.map((sample) => (
-              <button
-                key={sample.file}
-                type="button"
-                onClick={async () => {
-                  const res = await fetch(`/samples/${sample.file}`);
-                  await attach(await res.blob(), sample.file, sample.note);
-                }}
-                className="rounded-md border border-line px-2.5 py-1 text-[12px] text-ink-dim transition-colors duration-150 hover:border-line-strong hover:text-ink"
-              >
-                {sample.label}
-              </button>
-            ))}
-          </div>
-
-          {attached ? (
-            <div className="mt-4 rounded-md border border-line bg-surface p-4" data-testid="attached-file">
-              <div className="flex items-center justify-between gap-3">
-                <div className="min-w-0 text-[13px] text-ink">
-                  <span className="truncate font-medium">{attached.name}</span>
-                  <span className="ml-2 text-ink-faint">{Math.max(1, Math.round(attached.size / 1024))} KB</span>
-                </div>
-                <button type="button" onClick={detach} className="text-[12px] text-ink-dim hover:text-ink">
-                  Remove
-                </button>
+      <div className="mt-10 rounded-[28px] border border-line bg-surface p-6 shadow-[0_12px_40px_rgba(31,26,23,0.07)] sm:p-9">
+        {attached ? (
+          <div className="rounded-2xl border-2 border-line bg-canvas p-5" data-testid="attached-file">
+            <div className="flex flex-wrap items-start justify-between gap-x-4 gap-y-1">
+              <div className="min-w-0 grow text-xl text-ink">
+                <span className="block break-all font-bold">{attached.name}</span>
+                <span className="block text-lg text-ink-dim">{Math.max(1, Math.round(attached.size / 1024))} KB</span>
               </div>
-              {attached.preview && (
-                <img src={attached.preview} alt="The uploaded image" className="mt-3 max-h-40 rounded border border-line" data-testid="image-preview" />
-              )}
-              {fileNote && <p className="mt-2 text-[12px] leading-relaxed text-ink-dim">{fileNote}</p>}
+              <button type="button" onClick={detach} className="inline-flex min-h-11 items-center rounded-lg px-3 text-lg font-bold text-link hover:underline">
+                Remove
+              </button>
             </div>
-          ) : (
-            <>
-              <textarea
-                value={content}
-                onChange={(e) => setContent(e.target.value)}
-                rows={10}
-                spellCheck={false}
-                className="mt-4 w-full rounded-md border border-line bg-surface p-4 font-mono text-[13px] leading-relaxed text-ink outline-none transition-colors duration-150 focus:border-accent/50"
-                placeholder="Paste content to inspect…"
-              />
-              <div className="mt-2 text-[12px] text-ink-faint">
-                or{" "}
-                <button type="button" onClick={() => fileInput.current?.click()} className="text-accent hover:underline">
-                  upload a PDF, Word file or image
-                </button>{" "}
-                (up to {MAX_FILE_BYTES / 1024} KB)
-              </div>
-            </>
-          )}
-          <input
-            ref={fileInput}
-            type="file"
-            accept=".pdf,.docx,.png,.jpg,.jpeg"
-            data-testid="file-input"
-            className="hidden"
-            onChange={(e) => {
-              const f = e.target.files?.[0];
-              if (f) void attach(f, f.name);
-            }}
-          />
+            {attached.preview && (
+              <img src={attached.preview} alt="The uploaded image" className="mt-4 max-h-48 rounded-lg border border-line" data-testid="image-preview" />
+            )}
+            {fileNote && <p className="mt-3 text-lg leading-relaxed text-ink-dim">{fileNote}</p>}
+          </div>
+        ) : (
+          <>
+            <label htmlFor="check-text" className={fieldLabel}>
+              What would you like us to check?
+            </label>
+            <textarea
+              id="check-text"
+              value={content}
+              onChange={(e) => setContent(e.target.value)}
+              rows={6}
+              spellCheck={false}
+              className="mt-2 min-h-44 w-full rounded-2xl border-2 border-line-strong bg-surface p-5 text-[22px] leading-relaxed text-ink transition-colors focus:border-accent"
+              placeholder="Paste an email, a web page or a message to check…"
+            />
+            <button
+              type="button"
+              onClick={() => fileInput.current?.click()}
+              className="mt-4 flex w-full items-center gap-4 rounded-2xl border-2 border-dashed border-line-strong bg-canvas px-6 py-5 text-left transition-colors hover:border-accent"
+            >
+              <svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="shrink-0 text-ink-dim" aria-hidden>
+                <path d="M12 16V4M7 9l5-5 5 5M4 20h16" />
+              </svg>
+              <span className="text-xl">
+                <span className="font-bold text-ink">Or add a file or picture.</span>{" "}
+                <span className="text-ink-dim">Word, PDF, PNG or JPEG, up to {MAX_FILE_BYTES / 1024} KB.</span>
+              </span>
+            </button>
+          </>
+        )}
+        <input
+          ref={fileInput}
+          type="file"
+          accept=".pdf,.docx,.png,.jpg,.jpeg"
+          data-testid="file-input"
+          className="hidden"
+          onChange={(e) => {
+            const f = e.target.files?.[0];
+            if (f) void attach(f, f.name);
+          }}
+        />
 
-          <div className="mt-4 grid grid-cols-2 gap-4">
+        <details className="mt-6 rounded-2xl border border-line px-5 py-4">
+          <summary className="flex min-h-11 cursor-pointer items-center text-lg font-bold text-ink">More options</summary>
+          <div className="mt-4 grid grid-cols-1 gap-5 sm:grid-cols-2">
             <label className={fieldLabel}>
-              Content type
-              <select
-                value={contentType}
-                disabled={attached !== null}
-                onChange={(e) => setContentType(e.target.value as ContentType)}
-                className={fieldControl}
-              >
+              What kind of content is it?
+              <select value={contentType} disabled={attached !== null} onChange={(e) => setContentType(e.target.value as ContentType)} className={fieldControl}>
                 {CONTENT_TYPES.map((t) => (
                   <option key={t} value={t}>
-                    {t}
+                    {CONTENT_LABEL[t]}
                   </option>
                 ))}
               </select>
             </label>
             <label className={fieldLabel}>
-              Source
+              Where did it come from?
               <select value={source} onChange={(e) => setSource(e.target.value as (typeof SOURCES)[number])} className={fieldControl}>
                 {SOURCES.map((s) => (
                   <option key={s} value={s}>
-                    {s}
+                    {SOURCE_LABEL[s]}
                   </option>
                 ))}
               </select>
             </label>
+            <label className={`${fieldLabel} sm:col-span-2`}>
+              A web address or domain, if you have one (optional)
+              <input value={origin} onChange={(e) => setOrigin(e.target.value)} className={fieldControl} placeholder="e.g. https://example.com" />
+            </label>
           </div>
+        </details>
 
-          <label className={`mt-4 block ${fieldLabel}`}>
-            Origin (optional — a URL or domain, for untrusted-source tracking)
-            <input value={origin} onChange={(e) => setOrigin(e.target.value)} className={fieldControl} placeholder="e.g. https://example.com" />
-          </label>
-
+        <div className="mt-7 flex flex-wrap items-center gap-5">
           <button
             type="button"
             onClick={runInspection}
-            disabled={loading || (!attached && content.trim().length === 0)}
-            className="mt-6 rounded-md bg-ink px-4 py-2 text-[13px] font-medium text-canvas transition-opacity duration-150 hover:opacity-85 disabled:cursor-not-allowed disabled:opacity-30"
+            disabled={loading || attaching || (!attached && content.trim().length === 0)}
+            className="inline-flex h-16 items-center rounded-2xl bg-accent px-10 text-2xl font-bold text-ink transition-colors hover:bg-accent-hover disabled:cursor-not-allowed disabled:opacity-40"
           >
-            {loading ? "Inspecting…" : "Run inspection"}
+            {loading ? "Checking…" : attaching ? "Loading the file…" : "Check it"}
           </button>
+          <span className="text-lg text-ink-dim">Takes a few seconds. We never run what you add.</span>
         </div>
+      </div>
 
-        <div>
-          {error && (
-            <div className="rounded-lg border border-[color:var(--band-critical)]/25 bg-[color:var(--band-critical)]/5 p-4 text-[13px] text-[color:var(--band-critical)]">
-              <div className="font-medium">{error.error}</div>
-              {error.issues && (
-                <ul className="mt-2 list-disc space-y-1 pl-5 opacity-90">
-                  {error.issues.map((issue) => (
-                    <li key={issue}>{issue}</li>
-                  ))}
-                </ul>
-              )}
-              {error.message && <p className="mt-2 opacity-90">{error.message}</p>}
-            </div>
-          )}
+      <div className="mt-9">
+        <div className="text-xl font-bold text-ink">Not sure what to try? Start with an example.</div>
+        <div className="mt-4 flex flex-wrap gap-3">
+          {EXAMPLES.map((ex) => (
+            <button
+              key={ex.label}
+              type="button"
+              onClick={() => {
+                setContent(ex.content);
+                setContentType(ex.contentType);
+                setSource(ex.source);
+              }}
+              className={chip}
+            >
+              {ex.label}
+            </button>
+          ))}
+          {FILE_SAMPLES.map((sample) => (
+            <button
+              key={sample.file}
+              type="button"
+              onClick={() => void loadSample(sample.file, sample.note)}
+              className={chip}
+            >
+              {sample.label}
+            </button>
+          ))}
+        </div>
+      </div>
 
-          {!error && !result && !loading && (
-            <div className="rounded-lg border border-dashed border-line p-10 text-center text-[13px] text-ink-faint">
-              Results will appear here.
-            </div>
-          )}
+      <div className="mt-12 space-y-10">
+        {error && (
+          <div role="alert" className="rounded-2xl border-2 border-[color:var(--band-critical)]/35 bg-[color:var(--band-critical)]/8 p-6 text-lg text-ink">
+            <div className="text-xl font-bold text-[color:var(--band-critical)]">{error.error}</div>
+            {error.issues && (
+              <ul className="mt-2 list-disc space-y-1 pl-6">
+                {error.issues.map((issue) => (
+                  <li key={issue}>{issue}</li>
+                ))}
+              </ul>
+            )}
+            {error.message && <p className="mt-2">{error.message}</p>}
+          </div>
+        )}
 
-          {result && (
-            <div className="space-y-4 rise-in">
-              <div className="flex items-center justify-between rounded-lg border border-line bg-surface p-5">
-                <div>
-                  <div className="text-[11px] uppercase tracking-wide text-ink-faint">Decision</div>
-                  <div className="mt-1.5">
-                    <ActionBadge action={result.decision} />
+        {result && (
+          <div className="space-y-10 rise-in">
+            <VerdictBanner decision={result.decision} finalBand={result.finalBand} score={result.score} attackTypes={result.attackTypes} eventId={result.eventId} reviewId={result.reviewId} />
+
+            {result.extracted && (
+              <section className="rounded-3xl border border-line bg-surface p-6 sm:p-8" data-testid="what-it-read">
+                <h2 className="text-3xl font-extrabold tracking-tight text-ink">What the firewall read{contentType === "image" ? " (by OCR)" : ""}</h2>
+                <pre className="mt-4 max-h-64 overflow-auto whitespace-pre-wrap break-words [overflow-wrap:anywhere] font-sans text-xl leading-relaxed text-ink">
+                  {result.extracted.visibleText ||
+                    (contentType === "image"
+                      ? "(no readable text found in the image. The firewall can only judge text it can read.)"
+                      : "(no visible text)")}
+                </pre>
+                {result.extracted.hiddenText.length > 0 && (
+                  <div className="mt-5 rounded-2xl border-2 border-[color:var(--band-critical)]/30 bg-[color:var(--band-critical)]/6 p-5">
+                    <div className="text-lg font-bold text-[color:var(--band-critical)]">Hidden text a reader would not see</div>
+                    {result.extracted.hiddenText.map((t, i) => (
+                      <pre key={i} className="mt-2 whitespace-pre-wrap break-words [overflow-wrap:anywhere] font-sans text-xl leading-relaxed text-ink">
+                        {t}
+                      </pre>
+                    ))}
                   </div>
+                )}
+              </section>
+            )}
+
+            <HowWeChecked result={result} />
+
+            <details className="rounded-3xl border border-line bg-surface px-6 py-5 sm:px-8" data-testid="technical-details">
+              <summary className="flex min-h-11 cursor-pointer items-center text-2xl font-bold text-ink">Technical details</summary>
+              <div className="mt-6 space-y-6">
+                <ScoreBreakdown score={result.score} band={result.finalBand} contributions={result.contributions} />
+                <div>
+                  <div className="mb-3 text-lg font-bold text-ink">Evidence</div>
+                  <SignalsList signals={result.signals} />
                 </div>
-                <div className="max-w-[55%] text-right text-[12px] text-ink-dim">
-                  <div>{result.reason}</div>
-                  <Link href={`/events/${result.eventId}`} className="mt-1 inline-block text-accent hover:underline">
-                    View full event →
-                  </Link>
-                  {result.reviewId && (
-                    <Link href="/reviews" className="ml-3 mt-1 inline-block text-accent hover:underline">
-                      Open the review queue →
-                    </Link>
-                  )}
+                {result.verdict && <VerdictCard verdict={result.verdict} />}
+                <div className="font-mono text-[15px] text-ink-dim">
+                  llmStatus: {result.llmStatus} · detect {result.timings.detect?.toFixed(2)}ms · score {result.timings.score?.toFixed(2)}ms
+                  {result.timings.investigate ? ` · investigate ${result.timings.investigate.toFixed(0)}ms` : ""}
                 </div>
               </div>
-
-              {result.extracted && (
-                <div className="rounded-lg border border-line bg-surface p-5" data-testid="what-it-read">
-                  <div className="text-[11px] font-medium uppercase tracking-wide text-ink-faint">What the firewall read{contentType === "image" ? " (by OCR)" : ""}</div>
-                  <pre className="mt-2 max-h-48 overflow-auto whitespace-pre-wrap font-mono text-[12px] leading-relaxed text-ink">
-                    {result.extracted.visibleText ||
-                      (contentType === "image"
-                        ? "(no readable text found in the image. The firewall can only judge text it can read.)"
-                        : "(no visible text)")}
-                  </pre>
-                  {result.extracted.hiddenText.length > 0 && (
-                    <div className="mt-3">
-                      <div className="text-[11px] font-medium uppercase tracking-wide text-[color:var(--band-high)]">
-                        Hidden text a reader would not see
-                      </div>
-                      {result.extracted.hiddenText.map((t, i) => (
-                        <pre key={i} className="mt-1 whitespace-pre-wrap font-mono text-[12px] leading-relaxed text-[color:var(--band-high)]">
-                          {t}
-                        </pre>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              )}
-
-              <ScoreBreakdown score={result.score} band={result.finalBand} contributions={result.contributions} />
-
-              <div>
-                <div className="mb-2 text-[11px] font-medium uppercase tracking-wide text-ink-faint">Evidence</div>
-                <SignalsList signals={result.signals} />
-              </div>
-
-              {result.verdict && <VerdictCard verdict={result.verdict} />}
-
-              <div className="font-mono text-[11px] text-ink-faint">
-                llmStatus: {result.llmStatus} · detect {result.timings.detect?.toFixed(2)}ms · score {result.timings.score?.toFixed(2)}ms
-                {result.timings.investigate ? ` · investigate ${result.timings.investigate.toFixed(0)}ms` : ""}
-              </div>
-            </div>
-          )}
-        </div>
+            </details>
+          </div>
+        )}
       </div>
     </div>
   );

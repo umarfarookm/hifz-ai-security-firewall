@@ -5,6 +5,7 @@ import type { Session } from "@supabase/supabase-js";
 import type { ReviewItem } from "../../lib/review-store.js";
 import { getBrowserSupabase } from "../../lib/supabase-browser.js";
 import { ReviewStateBadge } from "../../components/badges.js";
+import { ATTACK_PLAIN, CHECK_PLAIN, TOOL_PLAIN } from "../../components/plain-labels.js";
 
 type Filter = "PENDING" | "DECIDED" | "EXPIRED" | "ALL";
 const FILTERS: Array<{ key: Filter; label: string }> = [
@@ -29,7 +30,7 @@ function timeLeft(expiresAt: string, now: number): string {
 }
 
 const fieldControl =
-  "w-full rounded-md border border-line bg-surface px-3 py-2 text-[13px] text-ink outline-none transition-colors duration-150 focus:border-accent/50";
+  "h-14 w-full rounded-xl border-2 border-line-strong bg-surface px-4 text-lg text-ink transition-colors focus:border-accent";
 
 export default function ReviewsPage() {
   const [items, setItems] = useState<ReviewItem[] | null>(null);
@@ -74,23 +75,23 @@ export default function ReviewsPage() {
     <div className="rise-in">
       <div className="flex flex-wrap items-start justify-between gap-6">
         <div>
-          <h1 className="text-xl font-medium tracking-tight text-ink">Review queue</h1>
-          <p className="mt-1.5 max-w-xl text-[13px] leading-relaxed text-ink-dim">
-            Anything the firewall is not willing to decide alone lands here: content it flagged for REVIEW, and tool calls the Action Guard held for approval.
-            Anyone can read the queue; approving or rejecting needs a reviewer account. An item nobody decides in 15 minutes expires and counts as rejected.
+          <h1 className="text-5xl font-extrabold leading-[1.08] tracking-tight text-ink sm:text-6xl">Review queue</h1>
+          <p className="mt-5 max-w-3xl text-2xl leading-relaxed text-ink-dim">
+            When the firewall is not sure, or the assistant wants to do something risky, it waits here for a person. Content it flagged for REVIEW and tool calls the Action Guard held both land in this queue.
+            Anyone can look; approving or rejecting needs a reviewer account. An item nobody decides in 15 minutes expires and counts as rejected.
           </p>
         </div>
         <ReviewerPanel session={session} />
       </div>
 
-      <div className="mt-8 flex flex-wrap gap-1.5">
+      <div className="mt-10 flex flex-wrap gap-3">
         {FILTERS.map((f) => (
           <button
             key={f.key}
             type="button"
             onClick={() => setFilter(f.key)}
-            className={`rounded-md border px-2.5 py-1 text-[12px] transition-colors duration-150 hover:border-line-strong hover:text-ink ${
-              filter === f.key ? "border-line-strong text-ink" : "border-line text-ink-dim"
+            className={`inline-flex min-h-12 items-center rounded-xl border-2 px-5 text-lg font-bold transition-colors hover:border-accent hover:bg-accent-tint ${
+              filter === f.key ? "border-accent bg-accent-tint text-ink" : "border-line bg-surface text-ink"
             }`}
           >
             {f.label}
@@ -99,15 +100,15 @@ export default function ReviewsPage() {
         ))}
       </div>
 
-      {loadError && <p className="mt-6 text-[13px] text-[color:var(--band-critical)]">Could not load the queue: {loadError}</p>}
-      {!items && !loadError && <p className="mt-6 text-[13px] text-ink-faint">Loading…</p>}
+      {loadError && <p className="mt-6 text-[18px] text-[color:var(--band-critical)]">Could not load the queue: {loadError}</p>}
+      {!items && !loadError && <p className="mt-6 text-[18px] text-ink-faint">Loading…</p>}
       {items && visible.length === 0 && (
-        <div className="mt-6 rounded-lg border border-dashed border-line p-10 text-center text-[13px] text-ink-faint">
+        <div className="mt-6 rounded-3xl border-2 border-dashed border-line p-12 text-center text-xl text-ink-dim">
           {filter === "PENDING" ? "Nothing is waiting for review." : "Nothing to show here."}
         </div>
       )}
 
-      <div className="mt-6 space-y-3">
+      <div className="mt-8 space-y-5">
         {visible.map((item) => (
           <ReviewCard key={item.id} item={item} now={now} session={session} onDecided={load} />
         ))}
@@ -138,11 +139,11 @@ function ReviewerPanel({ session }: { session: Session | null }) {
 
   if (session) {
     return (
-      <div className="rounded-lg border border-line bg-surface px-4 py-3 text-[12px] text-ink-dim">
+      <div className="rounded-2xl border border-line bg-surface px-5 py-4 text-lg text-ink-dim">
         <div>
           Signed in as <span className="text-ink">{session.user.email}</span>
         </div>
-        <button type="button" onClick={() => void getBrowserSupabase().auth.signOut()} className="mt-1.5 text-accent hover:underline">
+        <button type="button" onClick={() => void getBrowserSupabase().auth.signOut()} className="mt-1.5 font-bold text-link hover:underline">
           Sign out
         </button>
       </div>
@@ -150,17 +151,17 @@ function ReviewerPanel({ session }: { session: Session | null }) {
   }
 
   return (
-    <div className="w-full max-w-[260px]">
+    <div className="w-full max-w-[300px]">
       {!open ? (
         <button
           type="button"
           onClick={() => setOpen(true)}
-          className="rounded-md border border-line px-3 py-1.5 text-[12px] text-ink-dim transition-colors duration-150 hover:border-line-strong hover:text-ink"
+          className="inline-flex h-12 items-center rounded-xl border-2 border-line-strong px-5 text-lg font-bold text-ink transition-colors hover:border-accent hover:bg-accent-tint"
         >
           Reviewer sign in
         </button>
       ) : (
-        <form onSubmit={signIn} className="space-y-2 rounded-lg border border-line bg-surface p-4">
+        <form onSubmit={signIn} className="space-y-3 rounded-3xl border border-line bg-surface p-5">
           <input type="email" required value={email} onChange={(e) => setEmail(e.target.value)} placeholder="Email" autoComplete="username" className={fieldControl} />
           <input
             type="password"
@@ -171,11 +172,11 @@ function ReviewerPanel({ session }: { session: Session | null }) {
             autoComplete="current-password"
             className={fieldControl}
           />
-          {error && <p className="text-[12px] text-[color:var(--band-critical)]">{error}</p>}
+          {error && <p className="text-lg text-[color:var(--band-critical)]">{error}</p>}
           <button
             type="submit"
             disabled={busy}
-            className="w-full rounded-md bg-ink px-3 py-2 text-[13px] font-medium text-canvas transition-opacity duration-150 hover:opacity-85 disabled:opacity-40"
+            className="w-full rounded-xl bg-accent px-6 py-3 text-[18px] font-bold text-ink transition-colors duration-150 hover:bg-accent-hover disabled:opacity-40"
           >
             {busy ? "Signing in…" : "Sign in"}
           </button>
@@ -217,67 +218,75 @@ function ReviewCard({ item, now, session, onDecided }: { item: ReviewItem; now: 
   const pending = item.state === "PENDING";
 
   return (
-    <section className="rounded-lg border border-line bg-surface p-5">
+    <section className="rounded-3xl border border-line bg-surface p-6 sm:p-7">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex items-center gap-2">
           <ReviewStateBadge state={item.state} />
-          <span className="text-[11px] uppercase tracking-wide text-ink-faint">{item.kind === "tool_call" ? "Tool call held for approval" : "Content flagged for review"}</span>
+          <span className="text-[16px] font-bold uppercase tracking-wide text-ink-dim">{item.kind === "tool_call" ? "Tool call held for approval" : "Content flagged for review"}</span>
         </div>
-        <span className="font-mono text-[11px] text-ink-faint">
+        <span className="font-mono text-[16px] font-bold text-ink-dim">
           {pending ? timeLeft(item.expiresAt, now) : new Date(item.decidedAt ?? item.expiresAt).toLocaleTimeString()}
         </span>
       </div>
 
       {summary?.type === "tool_call" && (
-        <div className="mt-4 space-y-2 text-[13px]">
-          <div className="font-mono text-ink">
-            {summary.tool}
-            {summary.to ? <span className="text-ink-dim"> → {summary.to}</span> : null}
+        <div className="mt-4 space-y-2 text-[18px]">
+          <div className="text-2xl font-bold text-ink">
+            {TOOL_PLAIN[summary.tool] ?? summary.tool}
+            {summary.to ? <span className="font-normal text-ink-dim"> to {summary.to}</span> : null}
           </div>
           {summary.preview && (
-            <pre className="max-h-28 overflow-auto whitespace-pre-wrap break-words rounded-md border border-line bg-canvas p-3 font-mono text-[11px] leading-relaxed text-ink-dim">
+            <pre className="max-h-32 overflow-auto whitespace-pre-wrap break-words [overflow-wrap:anywhere] rounded-xl border border-line bg-canvas p-3 font-mono text-[15px] leading-relaxed text-ink">
               {summary.preview}
             </pre>
           )}
           {summary.failedCheck && (
-            <p className="text-[12px] text-ink-dim">
-              <span className="font-mono text-ink">{summary.failedCheck.checkId}</span> {summary.failedCheck.detail}
+            <p className="text-lg text-ink-dim">
+              <b className="text-ink">{summary.failedCheck.checkId}</b> {CHECK_PLAIN[summary.failedCheck.checkId] ?? ""} {summary.failedCheck.detail}
             </p>
           )}
-          {summary.triggeredBy.length > 0 && <p className="font-mono text-[11px] text-ink-faint">after reading: {summary.triggeredBy.join(", ")}</p>}
+          {summary.triggeredBy.length > 0 && <p className="font-mono text-[15px] text-ink-faint">after reading: {summary.triggeredBy.join(", ")}</p>}
         </div>
       )}
 
       {summary?.type === "content" && (
-        <div className="mt-4 space-y-2 text-[13px]">
-          <div className="flex flex-wrap items-center gap-2 font-mono text-[12px] text-ink-dim">
-            <span>{summary.finalBand}</span>
+        <div className="mt-4 space-y-2 text-[18px]">
+          <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-lg font-bold text-ink">
+            <span>Risk {summary.finalBand.toLowerCase()}</span>
             <span>score {summary.score}</span>
-            {summary.attackTypes.length > 0 && <span>{summary.attackTypes.join(", ")}</span>}
           </div>
-          <p className="text-[12px] text-ink-dim">{summary.reason}</p>
-          <pre className="max-h-28 overflow-auto whitespace-pre-wrap break-words rounded-md border border-line bg-canvas p-3 font-mono text-[11px] leading-relaxed text-ink-dim">
+          {summary.attackTypes.length > 0 && (
+            <ul className="space-y-1 text-lg text-ink-dim">
+              {summary.attackTypes.map((t) => (
+                <li key={t}>
+                  <span className="font-mono">{t}</span>: {ATTACK_PLAIN[t] ?? ""}
+                </li>
+              ))}
+            </ul>
+          )}
+          <p className="text-lg text-ink-dim">{summary.reason}</p>
+          <pre className="max-h-32 overflow-auto whitespace-pre-wrap break-words [overflow-wrap:anywhere] rounded-xl border border-line bg-canvas p-3 font-mono text-[15px] leading-relaxed text-ink">
             {summary.excerpt}
           </pre>
         </div>
       )}
 
-      {!summary && <p className="mt-4 text-[12px] text-ink-faint">The item this review refers to is no longer available.</p>}
+      {!summary && <p className="mt-4 text-lg text-ink-dim">The item this review refers to is no longer available.</p>}
 
-      {item.state !== "PENDING" && item.state !== "EXPIRED" && item.comment && <p className="mt-3 text-[12px] text-ink-dim">Reviewer comment: {item.comment}</p>}
-      {item.state === "EXPIRED" && <p className="mt-3 text-[12px] text-ink-faint">No decision in time, so this is treated as rejected.</p>}
+      {item.state !== "PENDING" && item.state !== "EXPIRED" && item.comment && <p className="mt-3 text-lg text-ink-dim">Reviewer comment: {item.comment}</p>}
+      {item.state === "EXPIRED" && <p className="mt-3 text-lg text-ink-dim">No decision in time, so this is treated as rejected.</p>}
 
       {pending && (
         <div className="mt-4 border-t border-line pt-4">
           {session ? (
             <div className="space-y-2">
               <input value={comment} onChange={(e) => setComment(e.target.value)} maxLength={500} placeholder="Comment (optional)" className={fieldControl} />
-              <div className="flex gap-2">
+              <div className="flex flex-wrap gap-3">
                 <button
                   type="button"
                   disabled={busy}
                   onClick={() => void decide("approve")}
-                  className="rounded-md bg-ink px-3 py-1.5 text-[12px] font-medium text-canvas transition-opacity duration-150 hover:opacity-85 disabled:opacity-40"
+                  className="inline-flex h-14 items-center rounded-xl bg-accent px-8 text-xl font-bold text-ink transition-colors duration-150 hover:bg-accent-hover disabled:opacity-40"
                 >
                   Approve
                 </button>
@@ -285,19 +294,19 @@ function ReviewCard({ item, now, session, onDecided }: { item: ReviewItem; now: 
                   type="button"
                   disabled={busy}
                   onClick={() => void decide("reject")}
-                  className="rounded-md border border-line px-3 py-1.5 text-[12px] text-ink-dim transition-colors duration-150 hover:border-line-strong hover:text-ink disabled:opacity-40"
+                  className="inline-flex h-14 items-center rounded-xl border-2 border-line-strong px-8 text-xl font-bold text-ink transition-colors duration-150 hover:border-accent hover:bg-accent-tint disabled:opacity-40"
                 >
                   Reject
                 </button>
               </div>
             </div>
           ) : (
-            <p className="text-[12px] text-ink-faint">Sign in as a reviewer to approve or reject this item.</p>
+            <p className="text-lg text-ink-dim">Sign in as a reviewer to approve or reject this item.</p>
           )}
         </div>
       )}
 
-      {message && <p className={`mt-3 text-[12px] ${message.ok ? "text-ink-dim" : "text-[color:var(--band-critical)]"}`}>{message.text}</p>}
+      {message && <p className={`mt-3 text-lg ${message.ok ? "text-ink-dim" : "text-[color:var(--band-critical)]"}`}>{message.text}</p>}
     </section>
   );
 }

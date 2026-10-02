@@ -44,7 +44,7 @@ For a change that's hard to express as an assertion (does this actually look rig
 
 ### Playground (`/playground`)
 - [ ] Click each of the three example buttons — content, type, and source all update together.
-- [ ] "Run inspection" is disabled with empty content, enabled otherwise.
+- [ ] "Check it" is disabled with empty content, enabled otherwise.
 - [ ] Run the legitimate example → decision is `ALLOW`, band `LOW`, "No rule detectors fired" shown, no verdict card (LLM wasn't needed).
 - [ ] Run the instruction-override example → decision is `BLOCK` or `REVIEW`, `OVR-001` appears under Evidence with the matched text highlighted, and (if the score landed in the escalation band) an Investigator verdict card appears with a rationale and a plan trace.
 - [ ] Click "View full event →" → lands on `/events/{id}`, same score/band/signals/verdict are shown there too, plus the score breakdown by contribution factor.

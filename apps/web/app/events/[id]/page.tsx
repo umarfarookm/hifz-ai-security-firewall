@@ -2,15 +2,17 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import type { Span } from "@hifz/firewall-core";
 import { getAuditWriter } from "../../../lib/api-helpers.js";
-import { ActionBadge, GuardBadge } from "../../../components/badges.js";
+import { GuardBadge } from "../../../components/badges.js";
+import { CHECK_PLAIN, CONTENT_TYPE_PLAIN, SOURCE_PLAIN, TOOL_PLAIN, TRUST_PLAIN } from "../../../components/plain-labels.js";
 import { ScoreBreakdown } from "../../../components/score-breakdown.js";
 import { SignalsList } from "../../../components/signals-list.js";
+import { VerdictBanner } from "../../../components/verdict-banner.js";
 import { VerdictCard } from "../../../components/verdict-card.js";
 
 export const dynamic = "force-dynamic";
 
-const panel = "rounded-lg border border-line bg-surface p-5";
-const panelLabel = "text-[11px] font-medium uppercase tracking-wide text-ink-faint";
+const card = "rounded-3xl border border-line bg-surface p-6 sm:p-8";
+const heading = "text-2xl font-extrabold tracking-tight text-ink sm:text-3xl";
 
 export default async function EventDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -18,53 +20,42 @@ export default async function EventDetailPage({ params }: { params: Promise<{ id
 
   if (!event) notFound();
 
+  const attackTypes = [...new Set(event.signals.map((s) => s.attackType))];
+  const kind = CONTENT_TYPE_PLAIN[event.contentType] ?? event.contentType;
+  const from = SOURCE_PLAIN[event.source] ?? event.source;
+  const trust = TRUST_PLAIN[event.trust] ?? event.trust;
+
   return (
     <div className="rise-in">
-      <Link href="/playground" className="text-[12px] text-ink-faint transition-colors duration-150 hover:text-ink-dim">
-        ← Back
+      <Link href="/playground" className="inline-flex min-h-11 items-center text-lg font-bold text-link hover:underline">
+        ← Back to the Playground
       </Link>
 
-      <div className="mt-3 flex items-start justify-between">
-        <div>
-          <h1 className="text-xl font-medium tracking-tight text-ink">Event detail</h1>
-          <p className="mt-1 font-mono text-[11px] text-ink-faint">{event.id}</p>
-        </div>
-        <ActionBadge action={event.action} />
-      </div>
+      <h1 className="mt-5 text-5xl font-extrabold leading-[1.08] tracking-tight text-ink sm:text-6xl">Event detail</h1>
+      <p className="mt-2 break-all font-mono text-[15px] text-ink-dim">{event.id}</p>
 
-      <div className="mt-9 grid grid-cols-1 gap-5 lg:grid-cols-2">
-        <div className="space-y-5">
-          <ScoreBreakdown score={event.score} band={event.finalBand} contributions={event.contributions} />
+      <div className="mt-8 space-y-8">
+        <VerdictBanner decision={event.action} finalBand={event.finalBand} score={event.score} attackTypes={attackTypes} />
 
-          <div className={panel}>
-            <div className={panelLabel}>Decision</div>
-            <p className="mt-2 text-[13px] leading-relaxed text-ink-dim">{event.reason}</p>
-            <p className="mt-1 font-mono text-[11px] text-ink-faint">{event.policyRuleId}</p>
-          </div>
+        <section className={card}>
+          <h2 className={heading}>What was checked</h2>
+          <p className="mt-2 text-lg text-ink-dim">
+            {kind}, from {from}. The source is {trust}.
+          </p>
+          <p className="mt-4 whitespace-pre-wrap break-words [overflow-wrap:anywhere] rounded-2xl border border-line bg-canvas p-5 font-mono text-[16px] leading-relaxed text-ink">
+            {event.contentExcerpt}
+          </p>
+        </section>
 
-          <div className={panel}>
-            <div className={panelLabel}>Content</div>
-            <p className="mt-2 whitespace-pre-wrap font-mono text-[12px] leading-relaxed text-ink-dim">{event.contentExcerpt}</p>
-            <p className="mt-3 text-[11px] text-ink-faint">
-              {event.contentType} · {event.source} · {event.trust}
-            </p>
-          </div>
+        <section className={card}>
+          <h2 className={heading}>Why this decision</h2>
+          <p className="mt-3 text-xl leading-relaxed text-ink">{event.reason}</p>
+          <p className="mt-2 font-mono text-[15px] text-ink-dim">Policy rule {event.policyRuleId}</p>
+        </section>
 
-          <div className={panel}>
-            <div className={panelLabel}>Timings</div>
-            <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 font-mono text-[11px] text-ink-dim">
-              {Object.entries(event.timings).map(([stage, ms]) => (
-                <span key={stage}>
-                  {stage}: {ms.toFixed(2)}ms
-                </span>
-              ))}
-            </div>
-          </div>
-        </div>
-
-        <div className="space-y-5">
-          <div>
-            <div className={`mb-2 ${panelLabel}`}>Signals</div>
+        <section>
+          <h2 className={heading}>What we found</h2>
+          <div className="mt-5">
             <SignalsList
               signals={event.signals.map((s) => ({
                 detectorId: s.detectorId,
@@ -75,36 +66,48 @@ export default async function EventDetailPage({ params }: { params: Promise<{ id
               }))}
             />
           </div>
+        </section>
 
-          {event.verdict && <VerdictCard verdict={event.verdict.verdict} steps={event.verdict.steps} />}
+        {event.verdict && <VerdictCard verdict={event.verdict.verdict} steps={event.verdict.steps} />}
 
-          {event.toolCalls.length > 0 && (
-            <div>
-              <div className={`mb-2 ${panelLabel}`}>Guard checks</div>
-              <div className="space-y-2">
-                {event.toolCalls.map((call, i) => (
-                  <div key={i} className="rounded-lg border border-line bg-surface p-3">
-                    <div className="flex items-center justify-between">
-                      <span className="font-mono text-[13px] text-ink">{call.tool}</span>
-                      <GuardBadge outcome={call.outcome} />
-                    </div>
-                    {call.checks.length > 0 && (
-                      <ul className="mt-2 space-y-1 text-[12px] text-ink-faint">
-                        {call.checks.map((check) => (
-                          <li key={check.checkId}>
-                            <span className={check.passed ? "text-[color:var(--band-low)]" : "text-[color:var(--band-critical)]"}>
-                              {check.passed ? "✓" : "✗"}
-                            </span>{" "}
-                            {check.checkId}: {check.detail}
-                          </li>
-                        ))}
-                      </ul>
-                    )}
+        <ScoreBreakdown score={event.score} band={event.finalBand} contributions={event.contributions} />
+
+        {event.toolCalls.length > 0 && (
+          <section>
+            <h2 className={heading}>What the guard decided</h2>
+            <div className="mt-5 space-y-4">
+              {event.toolCalls.map((call, i) => (
+                <div key={i} className="rounded-3xl border border-line bg-surface p-6">
+                  <div className="flex flex-wrap items-center justify-between gap-3">
+                    <span className="text-2xl font-bold text-ink">{TOOL_PLAIN[call.tool] ?? call.tool}</span>
+                    <GuardBadge outcome={call.outcome} />
                   </div>
-                ))}
-              </div>
+                  {call.checks.length > 0 && (
+                    <ul className="mt-4 space-y-2 text-[17px]">
+                      {call.checks.map((check) => (
+                        <li key={check.checkId} className="flex gap-2">
+                          <span className={check.passed ? "text-[color:var(--band-low)]" : "text-[color:var(--band-critical)]"} aria-label={check.passed ? "passed" : "failed"}>
+                            {check.passed ? "✓" : "✗"}
+                          </span>
+                          <span>
+                            <b>{check.checkId}</b> {CHECK_PLAIN[check.checkId] ?? ""} <span className="text-ink-dim">{check.detail}</span>
+                          </span>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </div>
+              ))}
             </div>
-          )}
+          </section>
+        )}
+
+        <div className="flex flex-wrap gap-x-5 gap-y-1 font-mono text-[15px] text-ink-dim">
+          {Object.entries(event.timings).map(([stage, ms]) => (
+            <span key={stage}>
+              {stage}: {ms.toFixed(2)}ms
+            </span>
+          ))}
         </div>
       </div>
     </div>
