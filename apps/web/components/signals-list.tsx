@@ -21,14 +21,14 @@ export interface SignalLike {
 /** Evidence highlights (LLD §10, Playground + Event detail screens). */
 export function SignalsList({ signals }: { signals: SignalLike[] }) {
   if (signals.length === 0) {
-    return <p className="text-[13px] text-ink-faint">No rule detectors fired on this content.</p>;
+    return <p className="text-[18px] text-ink-faint">No rule detectors fired on this content.</p>;
   }
 
   return (
     <div className="space-y-2">
       {signals.map((signal, i) => (
-        <div key={`${signal.detectorId}-${i}`} className="rounded-lg border border-line bg-surface p-3.5">
-          <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-[11px]">
+        <div key={`${signal.detectorId}-${i}`} className="rounded-2xl border border-line bg-surface p-3.5">
+          <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-[15px]">
             <span className="font-mono text-ink-dim">{signal.detectorId}</span>
             <span className="text-ink-faint">·</span>
             <span className="text-ink-dim">{signal.attackType.replace(/_/g, " ")}</span>
@@ -44,7 +44,7 @@ export function SignalsList({ signals }: { signals: SignalLike[] }) {
               {signal.evidence.map((span, j) => (
                 <mark
                   key={j}
-                  className="max-w-full break-words [overflow-wrap:anywhere] rounded border border-[color:var(--band-medium)]/25 bg-[color:var(--band-medium)]/10 px-1.5 py-0.5 font-mono text-[11px] text-[color:var(--band-medium)]"
+                  className="max-w-full break-words [overflow-wrap:anywhere] rounded border border-[color:var(--band-medium)]/25 bg-[color:var(--band-medium)]/10 px-1.5 py-0.5 font-mono text-[15px] text-[color:var(--band-medium)]"
                   title={`layer: ${span.layer}`}
                 >
                   {span.excerpt}

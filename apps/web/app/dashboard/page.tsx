@@ -36,11 +36,11 @@ async function loadDashboard(): Promise<DashboardData> {
 
 function Tile({ label, value, note, href }: { label: string; value: string; note?: string; href?: string }) {
   const body = (
-    <div className="rounded-lg border border-line bg-surface p-4 transition-colors duration-150 hover:border-line-strong">
-      <div className="text-[11px] uppercase tracking-wide text-ink-faint">{label}</div>
+    <div className="rounded-2xl border border-line bg-surface p-4 transition-colors duration-150 hover:border-line-strong">
+      <div className="text-[15px] uppercase tracking-wide text-ink-faint">{label}</div>
       {/* Proportional figures on purpose: tabular digits look loose at display size. */}
-      <div className="mt-1.5 font-sans text-[28px] font-medium leading-none tracking-tight text-ink">{value}</div>
-      {note && <div className="mt-2 text-[12px] text-ink-dim">{note}</div>}
+      <div className="mt-1.5 font-sans text-[40px] font-medium leading-none tracking-tight text-ink">{value}</div>
+      {note && <div className="mt-2 text-[16px] text-ink-dim">{note}</div>}
     </div>
   );
   return href ? <Link href={href}>{body}</Link> : body;
@@ -80,17 +80,17 @@ export default function DashboardPage() {
     <div className="rise-in">
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
-          <h1 className="text-xl font-medium tracking-tight text-ink">Dashboard</h1>
-          <p className="mt-1.5 max-w-xl text-[13px] leading-relaxed text-ink-dim">
+          <h1 className="text-5xl font-extrabold leading-[1.08] tracking-tight text-ink sm:text-6xl">Dashboard</h1>
+          <p className="mt-1.5 max-w-xl text-[18px] leading-relaxed text-ink-dim">
             What the firewall has seen on this deployment. Every figure is read from the audit log and the recorded evaluation runs, and refreshes by itself.
           </p>
         </div>
-        {data && <span className="font-mono text-[11px] text-ink-faint">updated {new Date(data.loadedAt).toLocaleTimeString()}</span>}
+        {data && <span className="font-mono text-[15px] text-ink-faint">updated {new Date(data.loadedAt).toLocaleTimeString()}</span>}
       </div>
 
-      {error && !data && <p className="mt-8 text-[13px] text-[color:var(--band-critical)]">Could not load the dashboard: {error}</p>}
-      {error && data && <p className="mt-4 text-[12px] text-ink-faint">Refresh failed ({error}); showing the last data.</p>}
-      {!data && !error && <p className="mt-8 text-[13px] text-ink-faint">Loading…</p>}
+      {error && !data && <p className="mt-8 text-[18px] text-[color:var(--band-critical)]">Could not load the dashboard: {error}</p>}
+      {error && data && <p className="mt-4 text-[16px] text-ink-faint">Refresh failed ({error}); showing the last data.</p>}
+      {!data && !error && <p className="mt-8 text-[18px] text-ink-faint">Loading…</p>}
 
       {data && counters && (
         <>
@@ -108,42 +108,42 @@ export default function DashboardPage() {
           </section>
 
           <section className="mt-10" aria-label="Inspections by risk band">
-            <h2 className="text-[14px] font-medium text-ink">Risk band distribution</h2>
-            <p className="mt-1 text-[12px] text-ink-dim">The final band after the investigator, for every inspection. Low is on top.</p>
+            <h2 className="text-[19px] font-medium text-ink">Risk band distribution</h2>
+            <p className="mt-1 text-[16px] text-ink-dim">The final band after the investigator, for every inspection. Low is on top.</p>
             <ul className="mt-4 space-y-3">
               {bands.map((row) => (
-                <li key={row.band} className="grid grid-cols-[88px_1fr_auto] items-center gap-3" aria-label={`${row.band}: ${row.count} inspections, ${percent(row.share)}`}>
+                <li key={row.band} className="grid grid-cols-[150px_1fr_auto] items-center gap-3" aria-label={`${row.band}: ${row.count} inspections, ${percent(row.share)}`}>
                   <BandBadge band={row.band} />
-                  <div className="h-2 w-full rounded-full bg-line/40" title={`${row.band}: ${row.count} (${percent(row.share, 1)})`}>
+                  <div className="h-3 w-full rounded-full bg-line" title={`${row.band}: ${row.count} (${percent(row.share, 1)})`}>
                     {row.count > 0 && (
                       <div
-                        className="h-2 rounded-r-[4px] rounded-l-full"
+                        className="h-3 rounded-r-[4px] rounded-l-full"
                         // A 2px floor keeps a tiny non-zero share visible; the count beside it carries the exact value.
                         style={{ width: `max(2px, ${row.share * 100}%)`, backgroundColor: `var(--band-${row.band.toLowerCase()})` }}
                       />
                     )}
                   </div>
-                  <div className="w-[88px] text-right font-mono text-[12px] text-ink-dim">
+                  <div className="w-[88px] text-right font-mono text-[16px] text-ink-dim">
                     <span className="text-ink">{row.count}</span> · {percent(row.share)}
                   </div>
                 </li>
               ))}
             </ul>
-            {total === 0 && <p className="mt-3 text-[12px] text-ink-faint">No inspections recorded yet.</p>}
+            {total === 0 && <p className="mt-3 text-[16px] text-ink-faint">No inspections recorded yet.</p>}
           </section>
 
           <section className="mt-10" aria-label="Latest events">
             <div className="flex items-baseline justify-between">
-              <h2 className="text-[14px] font-medium text-ink">Latest events</h2>
-              <span className="text-[12px] text-ink-faint">newest first, up to 10</span>
+              <h2 className="text-[19px] font-medium text-ink">Latest events</h2>
+              <span className="text-[16px] text-ink-faint">newest first, up to 10</span>
             </div>
             {data.events.length === 0 ? (
-              <div className="mt-4 rounded-lg border border-dashed border-line p-8 text-center text-[13px] text-ink-faint">No events recorded yet.</div>
+              <div className="mt-4 rounded-2xl border border-dashed border-line p-8 text-center text-[18px] text-ink-faint">No events recorded yet.</div>
             ) : (
-              <div className="mt-4 overflow-x-auto rounded-lg border border-line bg-surface">
-                <table className="w-full text-left text-[13px]">
+              <div className="mt-4 overflow-x-auto rounded-2xl border border-line bg-surface">
+                <table className="w-full text-left text-[18px]">
                   <thead>
-                    <tr className="border-b border-line text-[11px] uppercase tracking-wide text-ink-faint">
+                    <tr className="border-b border-line text-[15px] uppercase tracking-wide text-ink-faint">
                       <th className="px-4 py-3 font-medium">When</th>
                       <th className="px-4 py-3 font-medium">Decision</th>
                       <th className="px-4 py-3 font-medium">Band</th>
@@ -167,11 +167,11 @@ export default function DashboardPage() {
                         </td>
                         <td className="px-4 py-2.5 font-mono tabular-nums text-ink">{event.score}</td>
                         <td className="px-4 py-2.5 text-ink-dim">{event.attackTypes.length ? event.attackTypes.join(", ").replaceAll("_", " ") : "—"}</td>
-                        <td className="whitespace-nowrap px-4 py-2.5 font-mono text-[11px] text-ink-faint">
+                        <td className="whitespace-nowrap px-4 py-2.5 font-mono text-[15px] text-ink-faint">
                           {event.contentType} · {event.source}
                         </td>
                         <td className="whitespace-nowrap px-4 py-2.5 text-right">
-                          <Link href={`/events/${event.id}`} className="text-[12px] text-accent hover:underline">
+                          <Link href={`/events/${event.id}`} className="text-[16px] text-link hover:underline">
                             Details →
                           </Link>
                         </td>
@@ -185,12 +185,12 @@ export default function DashboardPage() {
 
           <section className="mt-10" aria-label="Held-out evaluation">
             <div className="flex items-baseline justify-between">
-              <h2 className="text-[14px] font-medium text-ink">Held-out evaluation</h2>
-              <Link href="/evaluation" className="text-[12px] text-accent hover:underline">
+              <h2 className="text-[19px] font-medium text-ink">Held-out evaluation</h2>
+              <Link href="/evaluation" className="text-[16px] text-link hover:underline">
                 Full report →
               </Link>
             </div>
-            <p className="mt-1 text-[12px] text-ink-dim">Cases never used to write or tune a rule. The latest recorded run in each mode.</p>
+            <p className="mt-1 text-[16px] text-ink-dim">Cases never used to write or tune a rule. The latest recorded run in each mode.</p>
             <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2">
               {(
                 [
@@ -200,27 +200,27 @@ export default function DashboardPage() {
               ).map(([mode, label]) => {
                 const run = heldout?.[mode] ?? null;
                 return (
-                  <div key={mode} className="rounded-lg border border-line bg-surface p-5">
-                    <div className="text-[11px] uppercase tracking-wide text-ink-faint">{label}</div>
+                  <div key={mode} className="rounded-2xl border border-line bg-surface p-5">
+                    <div className="text-[15px] uppercase tracking-wide text-ink-faint">{label}</div>
                     {run ? (
                       <>
                         <div className="mt-3 flex gap-8">
                           <div>
-                            <div className="font-sans text-[28px] font-medium leading-none tracking-tight text-ink">{percent(run.summary.overallDetectionRate, 1)}</div>
-                            <div className="mt-1.5 text-[12px] text-ink-dim">detection</div>
+                            <div className="font-sans text-[40px] font-medium leading-none tracking-tight text-ink">{percent(run.summary.overallDetectionRate, 1)}</div>
+                            <div className="mt-1.5 text-[16px] text-ink-dim">detection</div>
                           </div>
                           <div>
-                            <div className="font-sans text-[28px] font-medium leading-none tracking-tight text-ink">{percent(run.summary.overallFalsePositiveRate, 1)}</div>
-                            <div className="mt-1.5 text-[12px] text-ink-dim">false positives</div>
+                            <div className="font-sans text-[40px] font-medium leading-none tracking-tight text-ink">{percent(run.summary.overallFalsePositiveRate, 1)}</div>
+                            <div className="mt-1.5 text-[16px] text-ink-dim">false positives</div>
                           </div>
                         </div>
-                        <div className="mt-3 text-[11px] text-ink-faint">
+                        <div className="mt-3 text-[15px] text-ink-faint">
                           {run.summary.totalCases} cases{run.modelTag ? ` · ${run.modelTag}` : ""}
                           {run.finishedAt ? ` · ${new Date(run.finishedAt).toISOString().slice(0, 10)}` : ""}
                         </div>
                       </>
                     ) : (
-                      <p className="mt-3 text-[13px] text-ink-faint">No held-out run recorded.</p>
+                      <p className="mt-3 text-[18px] text-ink-faint">No held-out run recorded.</p>
                     )}
                   </div>
                 );

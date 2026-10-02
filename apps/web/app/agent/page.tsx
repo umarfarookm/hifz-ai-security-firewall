@@ -90,8 +90,8 @@ export default function AgentDemoPage() {
 
   return (
     <div className="rise-in">
-      <h1 className="text-xl font-medium tracking-tight text-ink">Agent demo</h1>
-      <p className="mt-1.5 max-w-xl text-[13px] leading-relaxed text-ink-dim">
+      <h1 className="text-5xl font-extrabold leading-[1.08] tracking-tight text-ink sm:text-6xl">Agent demo</h1>
+      <p className="mt-1.5 max-w-xl text-[18px] leading-relaxed text-ink-dim">
         HIFZ Mail — a protected email assistant. Every tool call it proposes is checked by the Action Guard (G1–G6) before it runs.
       </p>
 
@@ -104,7 +104,7 @@ export default function AgentDemoPage() {
                 type="button"
                 onClick={() => setInstruction(ex.instruction)}
                 title={ex.shows}
-                className={`rounded-md border px-2.5 py-1 text-[12px] transition-colors duration-150 hover:border-line-strong hover:text-ink ${
+                className={`rounded-xl border px-2.5 py-1 text-[16px] transition-colors duration-150 hover:border-accent hover:bg-accent-tint ${
                   instruction === ex.instruction ? "border-line-strong text-ink" : "border-line text-ink-dim"
                 }`}
               >
@@ -112,7 +112,7 @@ export default function AgentDemoPage() {
               </button>
             ))}
           </div>
-          <p className="mt-2 min-h-[1.25rem] text-[12px] leading-relaxed text-ink-faint">
+          <p className="mt-2 min-h-[1.25rem] text-[16px] leading-relaxed text-ink-faint">
             {EXAMPLES.find((ex) => ex.instruction === instruction)?.shows ?? ""}
           </p>
 
@@ -120,7 +120,7 @@ export default function AgentDemoPage() {
             value={instruction}
             onChange={(e) => setInstruction(e.target.value)}
             rows={3}
-            className="mt-4 w-full rounded-md border border-line bg-surface p-4 text-[13px] leading-relaxed text-ink outline-none transition-colors duration-150 focus:border-accent/50"
+            className="mt-4 w-full rounded-xl border border-line bg-surface p-4 text-[18px] leading-relaxed text-ink outline-none transition-colors duration-150 focus:border-accent/50"
             placeholder="Tell HIFZ Mail what to do…"
           />
 
@@ -128,13 +128,13 @@ export default function AgentDemoPage() {
             type="button"
             onClick={runAgent}
             disabled={loading || instruction.trim().length === 0}
-            className="mt-4 rounded-md bg-ink px-4 py-2 text-[13px] font-medium text-canvas transition-opacity duration-150 hover:opacity-85 disabled:cursor-not-allowed disabled:opacity-30"
+            className="mt-4 rounded-xl bg-accent px-6 py-3 text-[18px] font-bold text-ink transition-colors duration-150 hover:bg-accent-hover disabled:cursor-not-allowed disabled:opacity-30"
           >
             {loading ? "Running…" : "Run agent"}
           </button>
 
           {error && (
-            <div className="mt-6 rounded-lg border border-[color:var(--band-critical)]/25 bg-[color:var(--band-critical)]/5 p-4 text-[13px] text-[color:var(--band-critical)]">
+            <div className="mt-6 rounded-2xl border border-[color:var(--band-critical)]/25 bg-[color:var(--band-critical)]/5 p-4 text-[18px] text-[color:var(--band-critical)]">
               <div className="font-medium">{error.error}</div>
               {error.issues && (
                 <ul className="mt-2 list-disc space-y-1 pl-5 opacity-90">
@@ -150,9 +150,9 @@ export default function AgentDemoPage() {
           {result && (
             <div className="mt-6 space-y-4 rise-in">
               <div>
-                <div className="mb-2 text-[11px] font-medium uppercase tracking-wide text-ink-faint">Pipeline trace</div>
+                <div className="mb-2 text-[15px] font-medium uppercase tracking-wide text-ink-faint">Pipeline trace</div>
                 {result.toolCalls.length === 0 ? (
-                  <p className="text-[13px] text-ink-faint">The agent replied directly, with no tool calls.</p>
+                  <p className="text-[18px] text-ink-faint">The agent replied directly, with no tool calls.</p>
                 ) : (
                   <ol className="space-y-2">
                     {result.toolCalls.map((call, i) => (
@@ -163,28 +163,28 @@ export default function AgentDemoPage() {
               </div>
 
               {result.finalMessage && (
-                <div className="rounded-lg border border-line bg-surface p-4">
-                  <div className="text-[11px] font-medium uppercase tracking-wide text-ink-faint">HIFZ Mail says</div>
-                  <p className="mt-2 text-[13px] leading-relaxed text-ink">{result.finalMessage}</p>
+                <div className="rounded-2xl border border-line bg-surface p-4">
+                  <div className="text-[15px] font-medium uppercase tracking-wide text-ink-faint">HIFZ Mail says</div>
+                  <p className="mt-2 text-[18px] leading-relaxed text-ink">{result.finalMessage}</p>
                 </div>
               )}
 
-              <div className="font-mono text-[11px] text-ink-faint">llmStatus: {result.llmStatus}</div>
+              <div className="font-mono text-[15px] text-ink-faint">llmStatus: {result.llmStatus}</div>
             </div>
           )}
         </div>
 
         <div>
-          <div className="mb-2 text-[11px] font-medium uppercase tracking-wide text-ink-faint">Inbox</div>
+          <div className="mb-2 text-[15px] font-medium uppercase tracking-wide text-ink-faint">Inbox</div>
           <div className="space-y-2">
             {(inbox ?? []).map((email) => (
-              <div key={email.id} className="rounded-lg border border-line bg-surface p-3">
-                <div className="truncate text-[11px] text-ink-faint">{email.from}</div>
-                <div className="mt-0.5 truncate text-[13px] font-medium text-ink">{email.subject}</div>
-                <div className="mt-1 line-clamp-2 text-[12px] text-ink-faint">{email.preview}</div>
+              <div key={email.id} className="rounded-2xl border border-line bg-surface p-3">
+                <div className="truncate text-[15px] text-ink-faint">{email.from}</div>
+                <div className="mt-0.5 truncate text-[18px] font-medium text-ink">{email.subject}</div>
+                <div className="mt-1 line-clamp-2 text-[16px] text-ink-faint">{email.preview}</div>
               </div>
             ))}
-            {inbox === null && <p className="text-[13px] text-ink-faint">Loading…</p>}
+            {inbox === null && <p className="text-[18px] text-ink-faint">Loading…</p>}
           </div>
         </div>
       </div>
@@ -196,22 +196,22 @@ function ToolCallStep({ call }: { call: ToolCallLogEntry }) {
   const blocked = call.guardOutcome === "BLOCK";
   return (
     <li
-      className={`rounded-lg border p-3 ${
+      className={`rounded-2xl border p-3 ${
         blocked ? "border-[color:var(--band-critical)]/25 bg-[color:var(--band-critical)]/5" : "border-line bg-surface"
       }`}
     >
       <div className="flex items-center justify-between">
-        <span className="font-mono text-[13px] text-ink">{call.tool}</span>
+        <span className="font-mono text-[18px] text-ink">{call.tool}</span>
         <GuardBadge outcome={call.guardOutcome} />
       </div>
-      <p className="mt-1 text-[12px] text-ink-faint">{call.guardReason}</p>
+      <p className="mt-1 text-[16px] text-ink-faint">{call.guardReason}</p>
       {call.guardOutcome === "REQUIRE_APPROVAL" && (
-        <Link href="/reviews" className="mt-1.5 inline-block text-[12px] text-accent hover:underline">
+        <Link href="/reviews" className="mt-1.5 inline-block text-[16px] text-link hover:underline">
           Held for approval: open the review queue →
         </Link>
       )}
       {call.checks.length > 0 && (
-        <ul className="mt-2 space-y-0.5 text-[11px] text-ink-faint">
+        <ul className="mt-2 space-y-0.5 text-[15px] text-ink-faint">
           {call.checks.map((check) => (
             <li key={check.checkId}>
               <span className={check.passed ? "text-[color:var(--band-low)]" : "text-[color:var(--band-critical)]"}>
@@ -223,7 +223,7 @@ function ToolCallStep({ call }: { call: ToolCallLogEntry }) {
         </ul>
       )}
       {Object.keys(call.args).length > 0 && (
-        <pre className="mt-2 overflow-x-auto rounded bg-black/30 p-2 font-mono text-[11px] text-ink-dim">{JSON.stringify(call.args, null, 2)}</pre>
+        <pre className="mt-2 overflow-x-auto rounded bg-black/30 p-2 font-mono text-[15px] text-ink-dim">{JSON.stringify(call.args, null, 2)}</pre>
       )}
     </li>
   );

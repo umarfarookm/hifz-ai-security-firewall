@@ -9,8 +9,8 @@ import { VerdictCard } from "../../../components/verdict-card.js";
 
 export const dynamic = "force-dynamic";
 
-const panel = "rounded-lg border border-line bg-surface p-5";
-const panelLabel = "text-[11px] font-medium uppercase tracking-wide text-ink-faint";
+const panel = "rounded-2xl border border-line bg-surface p-5";
+const panelLabel = "text-[15px] font-medium uppercase tracking-wide text-ink-faint";
 
 export default async function EventDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -20,14 +20,14 @@ export default async function EventDetailPage({ params }: { params: Promise<{ id
 
   return (
     <div className="rise-in">
-      <Link href="/playground" className="text-[12px] text-ink-faint transition-colors duration-150 hover:text-ink-dim">
+      <Link href="/playground" className="text-[16px] text-ink-faint transition-colors duration-150 hover:text-ink-dim">
         ← Back
       </Link>
 
       <div className="mt-3 flex items-start justify-between">
         <div>
-          <h1 className="text-xl font-medium tracking-tight text-ink">Event detail</h1>
-          <p className="mt-1 font-mono text-[11px] text-ink-faint">{event.id}</p>
+          <h1 className="text-5xl font-extrabold leading-[1.08] tracking-tight text-ink sm:text-6xl">Event detail</h1>
+          <p className="mt-1 font-mono text-[15px] text-ink-faint">{event.id}</p>
         </div>
         <ActionBadge action={event.action} />
       </div>
@@ -38,21 +38,21 @@ export default async function EventDetailPage({ params }: { params: Promise<{ id
 
           <div className={panel}>
             <div className={panelLabel}>Decision</div>
-            <p className="mt-2 text-[13px] leading-relaxed text-ink-dim">{event.reason}</p>
-            <p className="mt-1 font-mono text-[11px] text-ink-faint">{event.policyRuleId}</p>
+            <p className="mt-2 text-[18px] leading-relaxed text-ink-dim">{event.reason}</p>
+            <p className="mt-1 font-mono text-[15px] text-ink-faint">{event.policyRuleId}</p>
           </div>
 
           <div className={panel}>
             <div className={panelLabel}>Content</div>
-            <p className="mt-2 whitespace-pre-wrap break-words [overflow-wrap:anywhere] font-mono text-[12px] leading-relaxed text-ink-dim">{event.contentExcerpt}</p>
-            <p className="mt-3 text-[11px] text-ink-faint">
+            <p className="mt-2 whitespace-pre-wrap break-words [overflow-wrap:anywhere] font-mono text-[16px] leading-relaxed text-ink-dim">{event.contentExcerpt}</p>
+            <p className="mt-3 text-[15px] text-ink-faint">
               {event.contentType} · {event.source} · {event.trust}
             </p>
           </div>
 
           <div className={panel}>
             <div className={panelLabel}>Timings</div>
-            <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 font-mono text-[11px] text-ink-dim">
+            <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 font-mono text-[15px] text-ink-dim">
               {Object.entries(event.timings).map(([stage, ms]) => (
                 <span key={stage}>
                   {stage}: {ms.toFixed(2)}ms
@@ -83,13 +83,13 @@ export default async function EventDetailPage({ params }: { params: Promise<{ id
               <div className={`mb-2 ${panelLabel}`}>Guard checks</div>
               <div className="space-y-2">
                 {event.toolCalls.map((call, i) => (
-                  <div key={i} className="rounded-lg border border-line bg-surface p-3">
+                  <div key={i} className="rounded-2xl border border-line bg-surface p-3">
                     <div className="flex items-center justify-between">
-                      <span className="font-mono text-[13px] text-ink">{call.tool}</span>
+                      <span className="font-mono text-[18px] text-ink">{call.tool}</span>
                       <GuardBadge outcome={call.outcome} />
                     </div>
                     {call.checks.length > 0 && (
-                      <ul className="mt-2 space-y-1 text-[12px] text-ink-faint">
+                      <ul className="mt-2 space-y-1 text-[16px] text-ink-faint">
                         {call.checks.map((check) => (
                           <li key={check.checkId}>
                             <span className={check.passed ? "text-[color:var(--band-low)]" : "text-[color:var(--band-critical)]"}>
