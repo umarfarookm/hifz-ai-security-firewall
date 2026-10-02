@@ -109,7 +109,7 @@ export default function ScenariosPage() {
                       {run.result.attackTypes.map((t) => (ATTACK_PLAIN[t] ? <div key={t}>{ATTACK_PLAIN[t]}</div> : null))}
                     </div>
                   )}
-                  <Link href={`/events/${run.result.eventId}`} className="inline-block text-lg font-bold text-link hover:underline">
+                  <Link href={`/events/${run.result.eventId}`} className="inline-flex min-h-11 items-center text-lg font-bold text-link hover:underline">
                     View full event →
                   </Link>
                 </div>

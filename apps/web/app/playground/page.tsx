@@ -110,9 +110,30 @@ export default function PlaygroundPage() {
   const [error, setError] = useState<ApiError | null>(null);
   const [attached, setAttached] = useState<AttachedFile | null>(null);
   const [fileNote, setFileNote] = useState<string | null>(null);
+  /** True while a file is being read or a sample is being fetched, so "Check it" cannot run on the wrong content. */
+  const [attaching, setAttaching] = useState(false);
   const fileInput = useRef<HTMLInputElement>(null);
 
   async function attach(file: File | Blob, name: string, note: string | null = null) {
+    setAttaching(true);
+    try {
+      await attachFile(file, name, note);
+    } finally {
+      setAttaching(false);
+    }
+  }
+
+  async function loadSample(file: string, note: string) {
+    setAttaching(true);
+    try {
+      const res = await fetch(`/samples/${file}`);
+      await attachFile(await res.blob(), file, note);
+    } finally {
+      setAttaching(false);
+    }
+  }
+
+  async function attachFile(file: File | Blob, name: string, note: string | null) {
     const type = fileContentType(name);
     if (!type) {
       setError({ error: "unsupported file", message: "Upload a .pdf, .docx, .png or .jpg file." });
@@ -172,12 +193,12 @@ export default function PlaygroundPage() {
       <div className="mt-10 rounded-[28px] border border-line bg-surface p-6 shadow-[0_12px_40px_rgba(31,26,23,0.07)] sm:p-9">
         {attached ? (
           <div className="rounded-2xl border-2 border-line bg-canvas p-5" data-testid="attached-file">
-            <div className="flex items-center justify-between gap-3">
-              <div className="min-w-0 text-xl text-ink">
-                <span className="truncate font-bold">{attached.name}</span>
-                <span className="ml-3 text-ink-dim">{Math.max(1, Math.round(attached.size / 1024))} KB</span>
+            <div className="flex flex-wrap items-start justify-between gap-x-4 gap-y-1">
+              <div className="min-w-0 grow text-xl text-ink">
+                <span className="block break-all font-bold">{attached.name}</span>
+                <span className="block text-lg text-ink-dim">{Math.max(1, Math.round(attached.size / 1024))} KB</span>
               </div>
-              <button type="button" onClick={detach} className="rounded-lg px-3 py-2 text-lg font-bold text-link hover:underline">
+              <button type="button" onClick={detach} className="inline-flex min-h-11 items-center rounded-lg px-3 text-lg font-bold text-link hover:underline">
                 Remove
               </button>
             </div>
@@ -228,7 +249,7 @@ export default function PlaygroundPage() {
         />
 
         <details className="mt-6 rounded-2xl border border-line px-5 py-4">
-          <summary className="cursor-pointer text-lg font-bold text-ink">More options</summary>
+          <summary className="flex min-h-11 cursor-pointer items-center text-lg font-bold text-ink">More options</summary>
           <div className="mt-4 grid grid-cols-1 gap-5 sm:grid-cols-2">
             <label className={fieldLabel}>
               What kind of content is it?
@@ -261,10 +282,10 @@ export default function PlaygroundPage() {
           <button
             type="button"
             onClick={runInspection}
-            disabled={loading || (!attached && content.trim().length === 0)}
+            disabled={loading || attaching || (!attached && content.trim().length === 0)}
             className="inline-flex h-16 items-center rounded-2xl bg-accent px-10 text-2xl font-bold text-ink transition-colors hover:bg-accent-hover disabled:cursor-not-allowed disabled:opacity-40"
           >
-            {loading ? "Checking…" : "Check it"}
+            {loading ? "Checking…" : attaching ? "Loading the file…" : "Check it"}
           </button>
           <span className="text-lg text-ink-dim">Takes a few seconds. We never run what you add.</span>
         </div>
@@ -291,10 +312,7 @@ export default function PlaygroundPage() {
             <button
               key={sample.file}
               type="button"
-              onClick={async () => {
-                const res = await fetch(`/samples/${sample.file}`);
-                await attach(await res.blob(), sample.file, sample.note);
-              }}
+              onClick={() => void loadSample(sample.file, sample.note)}
               className={chip}
             >
               {sample.label}
@@ -347,7 +365,7 @@ export default function PlaygroundPage() {
             <HowWeChecked result={result} />
 
             <details className="rounded-3xl border border-line bg-surface px-6 py-5 sm:px-8" data-testid="technical-details">
-              <summary className="cursor-pointer text-2xl font-bold text-ink">Technical details</summary>
+              <summary className="flex min-h-11 cursor-pointer items-center text-2xl font-bold text-ink">Technical details</summary>
               <div className="mt-6 space-y-6">
                 <ScoreBreakdown score={result.score} band={result.finalBand} contributions={result.contributions} />
                 <div>

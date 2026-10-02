@@ -27,7 +27,7 @@ export default async function EventDetailPage({ params }: { params: Promise<{ id
 
   return (
     <div className="rise-in">
-      <Link href="/playground" className="text-lg font-bold text-link hover:underline">
+      <Link href="/playground" className="inline-flex min-h-11 items-center text-lg font-bold text-link hover:underline">
         ← Back to the Playground
       </Link>
 

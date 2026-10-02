@@ -93,12 +93,12 @@ export function VerdictBanner({ decision, finalBand, score, attackTypes, eventId
               Risk: <b className="text-ink">{BAND_WORD[finalBand]}</b> ({score} out of 100)
             </span>
             {eventId && (
-              <Link href={`/events/${eventId}`} className="font-bold text-link hover:underline">
+              <Link href={`/events/${eventId}`} className="inline-flex min-h-11 items-center font-bold text-link hover:underline">
                 View full event →
               </Link>
             )}
             {reviewId && (
-              <Link href="/reviews" className="font-bold text-link hover:underline">
+              <Link href="/reviews" className="inline-flex min-h-11 items-center font-bold text-link hover:underline">
                 Open the review queue →
               </Link>
             )}

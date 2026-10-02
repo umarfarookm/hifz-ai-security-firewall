@@ -61,7 +61,7 @@ export function SiteHeader() {
   return (
     <header className="border-b border-line bg-surface">
       <div className="mx-auto flex max-w-[1184px] items-center justify-between gap-4 px-5 py-4 sm:px-8 lg:py-5">
-        <Link href="/" aria-label="HIFZ Firewall, home" className="rounded-lg focus-visible:outline-3 focus-visible:outline-offset-4 focus-visible:outline-ink">
+        <Link href="/" aria-label="HIFZ Firewall, home" className="inline-flex min-h-11 items-center rounded-lg focus-visible:outline-3 focus-visible:outline-offset-4 focus-visible:outline-ink">
           <BrandLockup />
         </Link>
         <div className="flex items-center gap-3">
