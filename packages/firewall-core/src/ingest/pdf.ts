@@ -37,10 +37,10 @@ const pdfjsLib = require("pdfjs-dist/legacy/build/pdf.js") as typeof import("pdf
 
 // pdfjs-dist normally loads its worker script from a file path (GlobalWorkerOptions.workerSrc). That cannot work once a
 // bundler has packed this module: webpack rewrites `require.resolve(...)` into a numeric module id, so on Vercel pdfjs
-// got `workerSrc = 46094` and failed with "Setting up fake worker failed: e.endsWith is not a function". Instead, hand
-// pdfjs the worker's message handler directly. Because it is a plain static require, the bundler includes the worker
-// file in the function and no path lookup is needed. workerSrc stays set only to satisfy pdfjs's own check; it is
-// never loaded when a handler is already present.
+// got `workerSrc = 46094` and failed with "Setting up fake worker failed: e.endsWith is not a function" (every PDF
+// upload answered 503). Instead, hand pdfjs the worker's message handler directly. Because it is a plain static
+// require, the bundler includes the worker file in the function and no path lookup is needed. workerSrc stays set only
+// to satisfy pdfjs's own check; it is never loaded when a handler is already present.
 (globalThis as { pdfjsWorker?: unknown }).pdfjsWorker = require("pdfjs-dist/legacy/build/pdf.worker.js");
 pdfjsLib.GlobalWorkerOptions.workerSrc = "pdfjs-dist/legacy/build/pdf.worker.js";
 
