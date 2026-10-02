@@ -11,6 +11,20 @@ loadDotenv({ path: "../../.env.local" });
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: true,
+  // tesseract.js starts a worker thread from files inside its own package; bundling it breaks those paths, so Next must
+  // load it from node_modules at runtime. The worker script and the offline wasm/model assets are not statically
+  // importable, so they are listed for file tracing explicitly (SPIKE: T0 of tasks/plan.md).
+  serverExternalPackages: ["tesseract.js"],
+  outputFileTracingIncludes: {
+    // Only real directories. Globbing into node_modules/tesseract.js goes through pnpm's symlink and makes Vercel reject
+    // the function ("files in symlinked directories"); file tracing already finds the worker script by its real path.
+    "/api/v1/inspect": [
+        "./ocr-assets/**/*",
+        // tesseract.js's Node worker ignores corePath and require()s the core from the package, so the .wasm files
+        // must ship. Real .pnpm directory (not the symlinked node_modules/tesseract.js) to avoid the Vercel symlink error.
+        "../../node_modules/.pnpm/tesseract.js-core@7.0.0/node_modules/tesseract.js-core/*.wasm",
+      ],
+  },
   transpilePackages: ["@hifz/agents", "@hifz/config", "@hifz/firewall-core"],
   webpack: (config) => {
     // Our packages use TS's "Bundler" moduleResolution, so internal imports

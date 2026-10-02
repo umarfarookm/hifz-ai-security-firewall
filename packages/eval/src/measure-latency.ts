@@ -109,7 +109,7 @@ function main(): void {
     perStageDurations.total.push(ns(totalStart, totalEnd));
   }
 
-  console.log(`(${skipped} case(s) skipped — no ingest adapter for their contentType (e.g. docx), or an async one (pdf) that isn't pure CPU)\n`);
+  console.log(`(${skipped} case(s) skipped — no ingest adapter for their contentType, or an async one (pdf, docx) that isn't pure CPU)\n`);
   summarize("ingest      ", perStageDurations.ingest);
   summarize("normalize   ", perStageDurations.normalize);
   summarize("detect      ", perStageDurations.detect);

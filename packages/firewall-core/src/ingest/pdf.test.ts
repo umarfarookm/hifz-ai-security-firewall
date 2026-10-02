@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { ingestPdf } from "./pdf.js";
+import { IngestError } from "./types.js";
 
 // Minimal, single-page PDFs with a real text layer and a correct xref
 // table, base64-encoded — pre-built rather than assembled inline, since a
@@ -20,5 +21,20 @@ describe("ingestPdf", () => {
   it("captures no hidden segments — LLD's pdf row lists none", async () => {
     const result = await ingestPdf(PDF_HELLO_WORLD_B64);
     expect(result.hiddenSegments).toEqual([]);
+  });
+
+  it("rejects base64 that is not a PDF with an IngestError", async () => {
+    await expect(ingestPdf(Buffer.from("just some text, not a pdf").toString("base64"))).rejects.toBeInstanceOf(IngestError);
+  });
+
+  it("rejects a corrupt PDF (valid header, broken body) with an IngestError, not a raw pdfjs error", async () => {
+    await expect(ingestPdf(Buffer.from("%PDF-1.4\n1 0 obj<<garbage").toString("base64"))).rejects.toBeInstanceOf(IngestError);
+  });
+
+  it("rejects a PDF over the page limit", async () => {
+    const kids = Array.from({ length: 6 }, (_, i) => `${3 + i} 0 R`).join(" ");
+    const pages = Array.from({ length: 6 }, (_, i) => `${3 + i} 0 obj<</Type/Page/Parent 2 0 R/MediaBox[0 0 100 100]>>endobj`).join("\n");
+    const pdf = `%PDF-1.4\n1 0 obj<</Type/Catalog/Pages 2 0 R>>endobj\n2 0 obj<</Type/Pages/Kids[${kids}]/Count 6>>endobj\n${pages}\ntrailer<</Root 1 0 R/Size 9>>\n%%EOF`;
+    await expect(ingestPdf(Buffer.from(pdf).toString("base64"))).rejects.toThrow(/at most 5/);
   });
 });

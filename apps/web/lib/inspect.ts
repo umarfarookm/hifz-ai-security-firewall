@@ -1,6 +1,7 @@
 import { createHash, randomUUID } from "node:crypto";
 import { z } from "zod";
 import {
+  IngestError,
   ingestAdapters,
   normalize,
   recursivelyDecode,
@@ -20,14 +21,23 @@ import {
 } from "@hifz/firewall-core";
 import type { InvestigatorTools, ModelGateway, VerdictCache } from "@hifz/agents";
 import { runEscalation } from "@hifz/agents";
+import { ingestImage } from "./ocr-image.js";
 import type { ReviewStore } from "./review-store.js";
 import type { AuditWriter } from "./audit.js";
 
 const MAX_INPUT_BYTES = 100 * 1024;
+/**
+ * The investigator sees at most this many characters (about 1.5K tokens), whatever the input size, so LLM cost per
+ * call is bounded. The rule detectors still scan the whole text; only the model's view is truncated.
+ */
+export const MAX_INVESTIGATOR_CHARS = 6000;
+/** How much extracted text the response echoes back for display. */
+const EXTRACTED_PREVIEW_CHARS = 4000;
+const BINARY_TYPES: ReadonlySet<string> = new Set(["pdf", "docx", "image"]);
 
 const inspectRequestSchema = z.object({
   content: z.string().min(1),
-  contentType: z.enum(["text", "markdown", "html", "email", "json", "source_code", "pdf", "docx"]),
+  contentType: z.enum(["text", "markdown", "html", "email", "json", "source_code", "pdf", "docx", "image"]),
   source: z.enum(["user_message", "web_page", "email", "api_response", "document", "tool_output"]),
   origin: z.string().optional(),
   sessionId: z.string().optional(),
@@ -53,6 +63,8 @@ export interface InspectResponseBody {
   signals: Signal[];
   /** Present only when the investigator LLM actually ran (llmStatus === "ok"). */
   verdict: InvestigatorVerdict | null;
+  /** For pdf/docx uploads: what the ingest stage read out of the file (the Playground's "what the firewall read"). */
+  extracted: { visibleText: string; hiddenText: string[] } | null;
 }
 
 export type InspectOutcome =
@@ -116,7 +128,7 @@ export async function runInspection(rawBody: unknown, deps: RunInspectionDeps): 
     const sessionId = await deps.audit.ensureSession(body.sessionId);
     const trust = trustFor(body.source);
 
-    const adapter = ingestAdapters[body.contentType as ContentType];
+    const adapter = body.contentType === "image" ? ingestImage : ingestAdapters[body.contentType as ContentType];
     if (!adapter) {
       return { kind: "validation_error", correlationId, issues: [`no ingest adapter for contentType "${body.contentType}" yet`] };
     }
@@ -136,7 +148,7 @@ export async function runInspection(rawBody: unknown, deps: RunInspectionDeps): 
       gateway: deps.gateway.metadata.provider === "none" ? null : deps.gateway,
       failureMode: deps.failureMode,
       investigatorRequest: {
-        content: normalized.visibleText,
+        content: normalized.visibleText.slice(0, MAX_INVESTIGATOR_CHARS),
         tools: buildInvestigatorTools(deps.audit, sessionId),
         detectorVersion: deps.detectorVersion,
         timeoutMs: deps.investigatorTimeoutMs,
@@ -156,7 +168,11 @@ export async function runInspection(rawBody: unknown, deps: RunInspectionDeps): 
     });
 
     const contentHash = createHash("sha256").update(body.content).digest("hex");
-    const contentExcerpt = body.content.length > 2000 ? body.content.slice(0, 2000) : body.content;
+    // A binary upload arrives as base64, which is unreadable in the event and review pages; store the text we read.
+    const excerptSource = BINARY_TYPES.has(body.contentType)
+      ? `[${body.contentType}, ${Math.max(1, Math.round((Buffer.byteLength(body.content, "utf8") * 3) / 4 / 1024))} KB] ${ingested.visibleText}`
+      : body.content;
+    const contentExcerpt = excerptSource.length > 2000 ? excerptSource.slice(0, 2000) : excerptSource;
 
     const inspectionId = await deps.audit.writeInspection({
       correlationId,
@@ -214,9 +230,13 @@ export async function runInspection(rawBody: unknown, deps: RunInspectionDeps): 
         contributions: riskAssessment.contributions,
         signals,
         verdict: escalation.verdict,
+        extracted: BINARY_TYPES.has(body.contentType)
+          ? { visibleText: ingested.visibleText.slice(0, EXTRACTED_PREVIEW_CHARS), hiddenText: ingested.hiddenSegments.map((h) => h.excerpt).slice(0, 20) }
+          : null,
       },
     };
   } catch (err) {
+    if (err instanceof IngestError) return { kind: "validation_error", correlationId, issues: [err.message] };
     return { kind: "pipeline_error", correlationId, message: err instanceof Error ? err.message : String(err) };
   }
 }

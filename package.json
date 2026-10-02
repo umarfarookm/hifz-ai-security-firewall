@@ -2,7 +2,7 @@
   "name": "hifz-ai",
   "private": true,
   "version": "0.1.0",
-  "description": "HIFZ AI — Agentic Security Firewall",
+  "description": "HIFZ AI \u2014 Agentic Security Firewall",
   "license": "MIT",
   "type": "module",
   "engines": {
@@ -18,7 +18,8 @@
     "test:watch": "vitest",
     "eval": "pnpm --filter=@hifz/eval run start",
     "typecheck": "pnpm -r run typecheck",
-    "deploy": "npx vercel@latest deploy --prod"
+    "deploy": "npx vercel@latest deploy --prod",
+    "eval:images": "pnpm --filter=@hifz/eval exec tsx ../../apps/web/scripts/eval-images.mts"
   },
   "devDependencies": {
     "@typescript-eslint/eslint-plugin": "^8.15.0",

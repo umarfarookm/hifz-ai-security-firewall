@@ -26,7 +26,7 @@
 **[DECISION]** Committed attack types (7): Instruction Override, Role Change, Secret Extraction, Tool Abuse, Credential Theft, Encoded Instructions, Indirect Prompt Injection.
 **[DECISION]** Not planned: Context Poisoning, Multi-Step Jailbreaks. For Problem 2 the F axis only counts attack types, so F3 (≥ 7) is the ceiling — extra types add no grid value. That time goes into reliability instead, which is what D2 is judged on.
 
-**[DECISION]** No D3 claim. D3 requires highly heterogeneous multimodal input (images/OCR). This is a go/no-go checkpoint mid-build — reconsider only if held-out results for all 7 committed types are already strong. Whether the free-tier model we use even accepts image input is unverified.
+**[DECISION]** No D3 claim. D3 requires highly heterogeneous multimodal input and demonstrable reliability. Images (read by offline OCR) and Word and PDF documents are now supported as extra inputs, but the image suite is small (36 images) and rules-only detection on it is 47.6% (see `datasets/images/README.md`), so the evidence does not support a D3 claim. We stay at F3 × D2 and report the image numbers as they are. Reasoning: ADR-13 in `docs/decision-log.md`.
 
 ### 1.1 Goals
 
@@ -62,9 +62,12 @@
 | Email (text body + headers) | P0 | Demo agent's primary data source |
 | API responses (JSON) | P1 | String fields are scanned |
 | Source code | P1 | Injections hidden in comments and string literals |
-| PDF (text layer only) | P1 | Named in the official input list; no OCR |
-| Word documents (.docx) | Out | Not built. `docx` is a reserved value in the API and database enums; the API answers 400 ("no ingest adapter") |
-| Images / OCR / audio | Out | Would be required for D3 |
+| PDF (text layer only) | P1 | Named in the official input list. Max 5 pages; no OCR of scanned pages |
+| Word documents (.docx) | P1 | Visible text plus hidden-layer text (hidden-font runs, near-white and 1 pt text, tracked deletions, comments, footnotes) |
+| Images (PNG, JPEG) | P2 | Text read by offline OCR (tesseract.js), then judged by the same pipeline. Measured on its own small suite, not in the held-out set |
+| Audio | Out | No speech-to-text path in any provider we use |
+
+**[DECISION]** Uploads are small by design: every content type is capped at 100 KB of base64 (about 75 KB of file), PDFs at 5 pages and images at 1600 × 1600 px. This keeps latency and DeepSeek cost low, in the demo and in production alike. The investigator sees at most 6,000 characters of any input.
 
 **[OFFICIAL]** The input list in the problem statement says the firewall *may* receive these sources — it is not a mandatory list.
 

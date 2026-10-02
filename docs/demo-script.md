@@ -26,6 +26,19 @@ Asking the agent to **follow instructions that are inside an email** ("do what t
 5. **Close the loop:** after one of the held sends (outside address or after reading the inbox), open **Review queue**, sign in as the reviewer, and approve or reject it. Approve shows the simulated effect; reject keeps it blocked.
 6. Point at the pipeline trace on screen (each step shows the G1–G6 results), then open **Scenarios** and use **Run all 7** for the content-stage detections. A scenario that lands on REVIEW also appears in the queue.
 
+## Documents and images (a second short segment)
+Use the **Playground** sample buttons; each file is about 1 KB to 20 KB.
+
+| Sample | Outcome | What it demonstrates |
+|---|---|---|
+| Word: hidden instruction | BLOCK. The "what the firewall read" panel shows the memo, then the hidden paragraph in orange | A reader sees an ordinary memo; the firewall also reads the hidden-font text |
+| Word: clean memo | ALLOW, no hidden text | Normal documents are not flagged |
+| PDF: injected invoice | BLOCK, from its **visible** text | PDFs have no hidden layer here, so say it is caught as visible text |
+| Image: attack screenshot | BLOCK. The panel shows the OCR text | There is no text layer; the pixels are read by offline OCR |
+| Image: clean note | ALLOW | A legitimate image is not flagged |
+
+Say plainly: image detection is measured on a small separate suite (rules-only, under 50%), and OCR can miss faint or heavy display text. The point of this segment is that the pipeline reads more than typed text, not that images are solved.
+
 ## Caveats
 - The agent's `/agent/run` is rate-limited to 3 requests per minute per IP, so leave about 20 seconds between runs when recording.
 - `send_email` is simulated. A `REQUIRE_APPROVAL` outcome creates an item in the review queue (`/reviews`); signing in as the reviewer and approving it only releases the simulated tool. Items expire after 15 minutes.
