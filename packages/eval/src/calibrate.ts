@@ -2,7 +2,7 @@
 /**
  * Task 2.11 (docs/PLAN.md): first calibration of the risk-score thresholds
  * (packages/firewall-core/src/scorer.ts's DEFAULT_THRESHOLDS), tuning split
- * only (CLAUDE.md's non-negotiable rule — held-out is never used to tune
+ * only (the evaluation rule in docs/architecture/HLD.md §12 — held-out is never used to tune
  * anything).
  *
  * Separates two very different failure modes that both show up as "missed

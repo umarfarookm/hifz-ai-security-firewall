@@ -293,7 +293,7 @@ Notifications and reviewer assignment for the queue; a shared-store rate limiter
 | Doc | What is in it |
 |---|---|
 | [`docs/official-requirements.md`](docs/official-requirements.md) | The hackathon requirements in plain text; wins any conflict |
-| [`docs/official-problem-statement.pdf`](docs/official-problem-statement.pdf) | The original problem statement |
+| The original problem statement | Published by the organisers on Unstop (not copied into this repository); summarised in `docs/official-requirements.md` |
 | [`docs/architecture/HLD.md`](docs/architecture/HLD.md) | System design: principles, pipeline, security architecture, judging-criteria mapping |
 | [`docs/architecture/LLD.md`](docs/architecture/LLD.md) | Contracts: data model, scoring formula, schema, API, sequence flows |
 | [`docs/decision-log.md`](docs/decision-log.md) | Why each major choice was made and what was rejected |

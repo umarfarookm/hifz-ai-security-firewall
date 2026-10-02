@@ -15,7 +15,7 @@ export interface ToolRegistryEntry {
 /**
  * Mirrors policies/tools.yaml. [DECISION] Hardcoded here rather than
  * loaded from the YAML file — policy loading from disk is @hifz/config's
- * job (see CLAUDE.md's repository layout) and doesn't exist yet. Keep
+ * job (see the repository layout in the README) and doesn't exist yet. Keep
  * this in sync with policies/tools.yaml by hand until it does.
  */
 export const TOOL_REGISTRY: Record<string, ToolRegistryEntry> = {

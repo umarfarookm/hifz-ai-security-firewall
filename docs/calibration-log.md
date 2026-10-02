@@ -2,7 +2,7 @@
 
 Records every time a scoring/policy constant (thresholds, severity weights, detector confidences) is
 calibrated against real data. **Tuning split only** — held-out is never used to tune anything
-(CLAUDE.md's non-negotiable rule). Each entry states what was measured, what changed (if anything),
+(the evaluation rule in `docs/architecture/HLD.md` §12). Each entry states what was measured, what changed (if anything),
 and the before/after numbers.
 
 Produced with `pnpm --filter @hifz/eval run calibrate` (a read-only report — it never edits the

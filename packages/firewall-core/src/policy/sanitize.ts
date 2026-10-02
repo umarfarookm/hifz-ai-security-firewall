@@ -14,7 +14,7 @@ interface RedactionSpan {
   attackType: string;
 }
 
-/** Matches packages/agents/src/investigator/prompt.ts's generateDelimiter — duplicated rather than imported, since firewall-core must not depend on packages/agents (see CLAUDE.md's import rules). */
+/** Matches packages/agents/src/investigator/prompt.ts's generateDelimiter — duplicated rather than imported, since firewall-core must not depend on packages/agents (see the repository layout in the README; enforced by eslint.config.js). */
 function generateDelimiter(): string {
   return `sanitized-${randomUUID()}`;
 }

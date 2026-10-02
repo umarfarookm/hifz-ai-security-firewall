@@ -62,4 +62,3 @@ Rule: P2 work never starts while any P0/P1 item is open. Tick an item only when 
 
 ---
 
-See `docs/demo-and-pitch.md` for the demo video outline and deck structure.

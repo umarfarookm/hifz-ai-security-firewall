@@ -13,7 +13,7 @@ const nextConfig = {
   reactStrictMode: true,
   // tesseract.js starts a worker thread from files inside its own package; bundling it breaks those paths, so Next must
   // load it from node_modules at runtime. The worker script and the offline wasm/model assets are not statically
-  // importable, so they are listed for file tracing explicitly (SPIKE: T0 of tasks/plan.md).
+  // importable, so they are listed for file tracing explicitly.
   serverExternalPackages: ["tesseract.js"],
   outputFileTracingIncludes: {
     // Only real directories. Globbing into node_modules/tesseract.js goes through pnpm's symlink and makes Vercel reject
