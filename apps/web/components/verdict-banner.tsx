@@ -1,6 +1,7 @@
 import Link from "next/link";
 import type { InspectResponseBody } from "../lib/inspect.js";
 import { ActionBadge } from "./badges.js";
+import { ATTACK_PLAIN } from "./plain-labels.js";
 
 type Decision = InspectResponseBody["decision"];
 
@@ -52,22 +53,21 @@ const COPY: Record<Decision, { title: string; body: string; tone: string; icon: 
   },
 };
 
-/** What each committed attack type means, in words a non-specialist can read. */
-const ATTACK_PLAIN: Record<string, string> = {
-  instruction_override: "Tries to make the AI ignore its rules.",
-  role_change: "Tries to change who the AI thinks it is.",
-  secret_extraction: "Tries to get the AI to reveal secrets.",
-  tool_abuse: "Tries to make the AI use its tools for something harmful.",
-  credential_theft: "Asks for passwords or keys.",
-  encoded_instructions: "Hides a command in encoded text.",
-  indirect_prompt_injection: "Hides a command in content the AI is asked to read.",
-};
-
 const BAND_WORD = { LOW: "Low", MEDIUM: "Medium", HIGH: "High", CRITICAL: "Very high" } as const;
 
-export function VerdictBanner({ result }: { result: InspectResponseBody }) {
-  const copy = COPY[result.decision];
-  const found = result.attackTypes.map((t) => ATTACK_PLAIN[t]).filter((t): t is string => Boolean(t));
+export interface VerdictBannerProps {
+  decision: Decision;
+  finalBand: InspectResponseBody["finalBand"];
+  score: number;
+  attackTypes: string[];
+  /** When set, the banner links to the full event page. */
+  eventId?: string;
+  reviewId?: string | null;
+}
+
+export function VerdictBanner({ decision, finalBand, score, attackTypes, eventId, reviewId }: VerdictBannerProps) {
+  const copy = COPY[decision];
+  const found = attackTypes.map((t) => ATTACK_PLAIN[t]).filter((t): t is string => Boolean(t));
   return (
     <section aria-label="Result" className={`rounded-3xl border-2 p-6 sm:p-9 ${copy.tone}`}>
       <div className="flex flex-col gap-6 sm:flex-row sm:items-start">
@@ -88,21 +88,23 @@ export function VerdictBanner({ result }: { result: InspectResponseBody }) {
             </ul>
           )}
           <div className="mt-6 flex flex-wrap items-center gap-x-5 gap-y-3 text-lg text-ink-dim">
-            <ActionBadge action={result.decision} />
+            <ActionBadge action={decision} />
             <span>
-              Risk: <b className="text-ink">{BAND_WORD[result.finalBand]}</b> ({result.score} out of 100)
+              Risk: <b className="text-ink">{BAND_WORD[finalBand]}</b> ({score} out of 100)
             </span>
-            <Link href={`/events/${result.eventId}`} className="font-bold text-link hover:underline">
-              View full event →
-            </Link>
-            {result.reviewId && (
+            {eventId && (
+              <Link href={`/events/${eventId}`} className="font-bold text-link hover:underline">
+                View full event →
+              </Link>
+            )}
+            {reviewId && (
               <Link href="/reviews" className="font-bold text-link hover:underline">
                 Open the review queue →
               </Link>
             )}
           </div>
-          <div className="mt-5 h-3 max-w-md overflow-hidden rounded-full bg-line" role="img" aria-label={`Risk ${result.score} out of 100`}>
-            <div className="h-full rounded-full bg-current" style={{ width: `${Math.max(2, result.score)}%` }} />
+          <div className="mt-5 h-3 max-w-md overflow-hidden rounded-full bg-line" role="img" aria-label={`Risk ${score} out of 100`}>
+            <div className="h-full rounded-full bg-current" style={{ width: `${Math.max(2, score)}%` }} />
           </div>
         </div>
       </div>

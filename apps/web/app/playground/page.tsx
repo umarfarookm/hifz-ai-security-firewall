@@ -320,7 +320,7 @@ export default function PlaygroundPage() {
 
         {result && (
           <div className="space-y-10 rise-in">
-            <VerdictBanner result={result} />
+            <VerdictBanner decision={result.decision} finalBand={result.finalBand} score={result.score} attackTypes={result.attackTypes} eventId={result.eventId} reviewId={result.reviewId} />
 
             {result.extracted && (
               <section className="rounded-3xl border border-line bg-surface p-6 sm:p-8" data-testid="what-it-read">
