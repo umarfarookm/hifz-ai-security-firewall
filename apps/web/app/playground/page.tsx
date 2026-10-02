@@ -319,7 +319,7 @@ export default function PlaygroundPage() {
               {result.extracted && (
                 <div className="rounded-lg border border-line bg-surface p-5" data-testid="what-it-read">
                   <div className="text-[11px] font-medium uppercase tracking-wide text-ink-faint">What the firewall read{contentType === "image" ? " (by OCR)" : ""}</div>
-                  <pre className="mt-2 max-h-48 overflow-auto whitespace-pre-wrap font-mono text-[12px] leading-relaxed text-ink">
+                  <pre className="mt-2 max-h-48 overflow-auto whitespace-pre-wrap break-words [overflow-wrap:anywhere] font-mono text-[12px] leading-relaxed text-ink">
                     {result.extracted.visibleText ||
                       (contentType === "image"
                         ? "(no readable text found in the image. The firewall can only judge text it can read.)"
@@ -331,7 +331,7 @@ export default function PlaygroundPage() {
                         Hidden text a reader would not see
                       </div>
                       {result.extracted.hiddenText.map((t, i) => (
-                        <pre key={i} className="mt-1 whitespace-pre-wrap font-mono text-[12px] leading-relaxed text-[color:var(--band-high)]">
+                        <pre key={i} className="mt-1 whitespace-pre-wrap break-words [overflow-wrap:anywhere] font-mono text-[12px] leading-relaxed text-[color:var(--band-high)]">
                           {t}
                         </pre>
                       ))}

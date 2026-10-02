@@ -44,7 +44,7 @@ export function SignalsList({ signals }: { signals: SignalLike[] }) {
               {signal.evidence.map((span, j) => (
                 <mark
                   key={j}
-                  className="rounded border border-[color:var(--band-medium)]/25 bg-[color:var(--band-medium)]/10 px-1.5 py-0.5 font-mono text-[11px] text-[color:var(--band-medium)]"
+                  className="max-w-full break-words [overflow-wrap:anywhere] rounded border border-[color:var(--band-medium)]/25 bg-[color:var(--band-medium)]/10 px-1.5 py-0.5 font-mono text-[11px] text-[color:var(--band-medium)]"
                   title={`layer: ${span.layer}`}
                 >
                   {span.excerpt}

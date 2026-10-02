@@ -33,7 +33,7 @@ export default async function EventDetailPage({ params }: { params: Promise<{ id
       </div>
 
       <div className="mt-9 grid grid-cols-1 gap-5 lg:grid-cols-2">
-        <div className="space-y-5">
+        <div className="min-w-0 space-y-5">
           <ScoreBreakdown score={event.score} band={event.finalBand} contributions={event.contributions} />
 
           <div className={panel}>
@@ -44,7 +44,7 @@ export default async function EventDetailPage({ params }: { params: Promise<{ id
 
           <div className={panel}>
             <div className={panelLabel}>Content</div>
-            <p className="mt-2 whitespace-pre-wrap font-mono text-[12px] leading-relaxed text-ink-dim">{event.contentExcerpt}</p>
+            <p className="mt-2 whitespace-pre-wrap break-words [overflow-wrap:anywhere] font-mono text-[12px] leading-relaxed text-ink-dim">{event.contentExcerpt}</p>
             <p className="mt-3 text-[11px] text-ink-faint">
               {event.contentType} · {event.source} · {event.trust}
             </p>
