@@ -36,6 +36,7 @@ Use the **Playground** sample buttons; each file is about 1 KB to 20 KB.
 | PDF: injected invoice | BLOCK, from its **visible** text | PDFs have no hidden layer here, so say it is caught as visible text |
 | Image: attack screenshot | BLOCK. The panel shows the OCR text | There is no text layer; the pixels are read by offline OCR |
 | Image: clean note | ALLOW | A legitimate image is not flagged |
+| Source code: planted comment (example chip; type is set to Source code) | BLOCK (score 91). Comments and strings in code are scanned | Source code is one of the input sources named in the brief |
 
 Say plainly: image detection is measured on a small separate suite (rules-only, under 50%), and OCR can miss faint or heavy display text. The point of this segment is that the pipeline reads more than typed text, not that images are solved.
 

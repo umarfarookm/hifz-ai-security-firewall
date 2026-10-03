@@ -487,6 +487,7 @@ None of the YAML files is read at runtime. They are hand-maintained documentatio
 - English-only detection rules.
 - Hidden text via external CSS is not detected.
 - Image input is read by OCR, which misses some faint or heavy display-style text, and an image whose text cannot be read gives the firewall nothing to judge. The image suite is small (36 images); no D3 claim.
+- TOL-001 ("send/forward an email/message to…") fires for any recipient, so a harmless request to email a colleague can score MEDIUM and be sanitized. The held-out false-positive figure does not cover this phrasing; fixing it means a tuning-split change and a fresh held-out run.
 - Rule detectors can be evaded by novel phrasing; the investigator reduces but does not eliminate this — measured rates are reported as-is.
 - Demo tools and secrets are simulated; approving a held action releases a simulated tool and does not resume the agent.
 - Word: hiding inherited from a style (rather than set on the run) is not seen, and text boxes are read as ordinary runs. The docx extractor is tested on generated files and **[VERIFIED]** on one file saved by Word itself (`packages/firewall-core/src/ingest/fixtures/word-hidden.docx`, Font > Hidden on one paragraph); other Word versions and Pages are untested. PDF is text layer only, and a white-on-white PDF line is read as ordinary visible text.
