@@ -69,16 +69,16 @@ export function VerdictBanner({ decision, finalBand, score, attackTypes, eventId
   const copy = COPY[decision];
   const found = attackTypes.map((t) => ATTACK_PLAIN[t]).filter((t): t is string => Boolean(t));
   return (
-    <section aria-label="Result" className={`rounded-3xl border-2 p-6 sm:p-9 ${copy.tone}`}>
-      <div className="flex flex-col gap-6 sm:flex-row sm:items-start">
-        <svg width="72" height="72" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" className="shrink-0" aria-hidden>
+    <section aria-label="Result" className={`rounded-3xl border-2 p-5 sm:p-6 ${copy.tone}`}>
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-start">
+        <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" className="shrink-0" aria-hidden>
           {copy.icon}
         </svg>
         <div className="min-w-0">
-          <h2 className="text-3xl font-extrabold leading-tight tracking-tight text-ink sm:text-4xl">{copy.title}</h2>
-          <p className="mt-3 text-xl leading-relaxed text-ink">{copy.body}</p>
+          <h2 className="text-xl font-extrabold leading-tight tracking-tight text-ink sm:text-2xl">{copy.title}</h2>
+          <p className="mt-3 text-lg leading-relaxed text-ink">{copy.body}</p>
           {found.length > 0 && (
-            <ul className="mt-4 space-y-1.5 text-lg text-ink">
+            <ul className="mt-4 space-y-1.5 text-base text-ink">
               {found.map((f) => (
                 <li key={f} className="flex gap-2">
                   <span aria-hidden className="mt-2.5 h-2 w-2 shrink-0 rounded-full bg-current" />
@@ -87,7 +87,7 @@ export function VerdictBanner({ decision, finalBand, score, attackTypes, eventId
               ))}
             </ul>
           )}
-          <div className="mt-6 flex flex-wrap items-center gap-x-5 gap-y-3 text-lg text-ink-dim">
+          <div className="mt-4 flex flex-wrap items-center gap-x-4 gap-y-3 text-base text-ink-dim">
             <ActionBadge action={decision} />
             <span>
               Risk: <b className="text-ink">{BAND_WORD[finalBand]}</b> ({score} out of 100)
@@ -103,7 +103,7 @@ export function VerdictBanner({ decision, finalBand, score, attackTypes, eventId
               </Link>
             )}
           </div>
-          <div className="mt-5 h-3 max-w-md overflow-hidden rounded-full bg-line" role="img" aria-label={`Risk ${score} out of 100`}>
+          <div className="mt-3 h-3 max-w-md overflow-hidden rounded-full bg-line" role="img" aria-label={`Risk ${score} out of 100`}>
             <div className="h-full rounded-full bg-current" style={{ width: `${Math.max(2, score)}%` }} />
           </div>
         </div>

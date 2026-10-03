@@ -22,11 +22,11 @@ export function FirewallMark({ className = "h-7 w-7" }: { className?: string }) 
 
 export function BrandLockup({ compact = false }: { compact?: boolean }) {
   return (
-    <span className="flex items-center gap-3 text-ink sm:gap-4">
-      <Wordmark className={compact ? "h-6 w-auto" : "h-7 w-auto sm:h-8"} />
-      <span className="h-6 w-0.5 bg-line-strong sm:h-7" aria-hidden />
-      <span className="flex items-center gap-2 text-xl font-bold sm:text-2xl">
-        <FirewallMark className="h-6 w-6 text-accent sm:h-7 sm:w-7" />
+    <span className="flex items-center gap-2.5 text-ink sm:gap-3">
+      <Wordmark className={compact ? "h-5 w-auto" : "h-6 w-auto sm:h-7"} />
+      <span className="h-5 w-0.5 bg-line-strong sm:h-6" aria-hidden />
+      <span className="flex items-center gap-2 text-lg font-bold sm:text-xl">
+        <FirewallMark className="h-5 w-5 text-accent sm:h-6 sm:w-6" />
         Firewall
       </span>
     </span>

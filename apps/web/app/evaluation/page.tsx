@@ -34,10 +34,10 @@ function SplitSection({ title, note, runs }: { title: string; note: string; runs
   const present = MODES.filter((m) => runs[m.key]);
   if (present.length === 0) {
     return (
-      <section className="mt-10">
-        <h2 className="text-3xl font-extrabold tracking-tight text-ink">{title}</h2>
-        <p className="mt-2 text-lg text-ink-dim">{note}</p>
-        <div className="mt-4 rounded-3xl border-2 border-dashed border-line p-8 text-xl text-ink-dim">No run has been recorded for this split yet.</div>
+      <section className="mt-6">
+        <h2 className="text-2xl font-extrabold tracking-tight text-ink">{title}</h2>
+        <p className="mt-2 text-base text-ink-dim">{note}</p>
+        <div className="mt-4 rounded-3xl border-2 border-dashed border-line p-6 text-lg text-ink-dim">No run has been recorded for this split yet.</div>
       </section>
     );
   }
@@ -50,17 +50,17 @@ function SplitSection({ title, note, runs }: { title: string; note: string; runs
   };
 
   return (
-    <section className="mt-10">
-      <h2 className="text-3xl font-extrabold tracking-tight text-ink">{title}</h2>
-      <p className="mt-2 max-w-3xl text-lg leading-relaxed text-ink-dim">{note}</p>
+    <section className="mt-6">
+      <h2 className="text-2xl font-extrabold tracking-tight text-ink">{title}</h2>
+      <p className="mt-2 max-w-3xl text-base leading-relaxed text-ink-dim">{note}</p>
 
       <div className="mt-4 overflow-x-auto rounded-3xl border border-line bg-surface">
-        <table className="w-full text-left text-lg">
+        <table className="w-full text-left text-base">
           <thead>
-            <tr className="border-b border-line text-[15px] uppercase tracking-wide text-ink-faint">
-              <th className="px-3 py-4 font-bold sm:px-5">&nbsp;</th>
+            <tr className="border-b border-line text-[14px] uppercase tracking-wide text-ink-faint">
+              <th className="px-3 py-4 font-bold sm:px-4">&nbsp;</th>
               {MODES.map((m) => (
-                <th key={m.key} className="px-3 py-4 font-bold sm:px-5">
+                <th key={m.key} className="px-3 py-4 font-bold sm:px-4">
                   {m.label}
                 </th>
               ))}
@@ -68,62 +68,62 @@ function SplitSection({ title, note, runs }: { title: string; note: string; runs
           </thead>
           <tbody className="font-mono text-ink">
             <tr className="border-b border-line">
-              <td className="px-3 py-3.5 sm:px-5 font-sans"><div className="font-bold text-ink">Detection rate</div><div className="text-[15px] text-ink-dim">Share of attacks we caught</div></td>
+              <td className="px-3 py-3.5 sm:px-4 font-sans"><div className="font-bold text-ink">Detection rate</div><div className="text-[14px] text-ink-dim">Share of attacks we caught</div></td>
               {MODES.map((m) => (
-                <td key={m.key} className="px-3 py-3.5 sm:px-5">
+                <td key={m.key} className="px-3 py-3.5 sm:px-4">
                   {pct(runs[m.key]?.summary.overallDetectionRate)}
                 </td>
               ))}
             </tr>
             <tr className="border-b border-line">
-              <td className="px-3 py-3.5 sm:px-5 font-sans"><div className="font-bold text-ink">False-positive rate</div><div className="text-[15px] text-ink-dim">Harmless items we wrongly flagged</div></td>
+              <td className="px-3 py-3.5 sm:px-4 font-sans"><div className="font-bold text-ink">False-positive rate</div><div className="text-[14px] text-ink-dim">Harmless items we wrongly flagged</div></td>
               {MODES.map((m) => (
-                <td key={m.key} className="px-3 py-3.5 sm:px-5">
+                <td key={m.key} className="px-3 py-3.5 sm:px-4">
                   {pct(runs[m.key]?.summary.overallFalsePositiveRate)}
                 </td>
               ))}
             </tr>
             <tr className="border-b border-line">
-              <td className="px-3 py-3.5 sm:px-5 font-sans"><div className="font-bold text-ink">Precision / recall</div><div className="text-[15px] text-ink-dim">Flags that were right / attacks found</div></td>
+              <td className="px-3 py-3.5 sm:px-4 font-sans"><div className="font-bold text-ink">Precision / recall</div><div className="text-[14px] text-ink-dim">Flags that were right / attacks found</div></td>
               {MODES.map((m) => (
-                <td key={m.key} className="px-3 py-3.5 sm:px-5">
+                <td key={m.key} className="px-3 py-3.5 sm:px-4">
                   {runs[m.key] ? `${pct(runs[m.key]!.summary.precision)} / ${pct(runs[m.key]!.summary.recall)}` : "—"}
                 </td>
               ))}
             </tr>
             <tr className="border-b border-line">
-              <td className="px-3 py-3.5 sm:px-5 font-sans"><div className="font-bold text-ink">Latency p50 / p95</div><div className="text-[15px] text-ink-dim">Typical time / slow-case time</div></td>
+              <td className="px-3 py-3.5 sm:px-4 font-sans"><div className="font-bold text-ink">Latency p50 / p95</div><div className="text-[14px] text-ink-dim">Typical time / slow-case time</div></td>
               {MODES.map((m) => (
-                <td key={m.key} className="px-3 py-3.5 sm:px-5">
+                <td key={m.key} className="px-3 py-3.5 sm:px-4">
                   {runs[m.key] ? `${ms(runs[m.key]!.summary.latency.p50)} / ${ms(runs[m.key]!.summary.latency.p95)}` : "—"}
                 </td>
               ))}
             </tr>
             <tr className="border-b border-line">
-              <td className="px-3 py-3.5 sm:px-5 font-sans"><div className="font-bold text-ink">LLM calls that failed safe</div><div className="text-[15px] text-ink-dim">Second opinions that failed, so we played it safe</div></td>
+              <td className="px-3 py-3.5 sm:px-4 font-sans"><div className="font-bold text-ink">LLM calls that failed safe</div><div className="text-[14px] text-ink-dim">Second opinions that failed, so we played it safe</div></td>
               {MODES.map((m) => {
                 const counts = runs[m.key]?.summary.llmStatusCounts;
                 const failed = counts ? (counts.unavailable ?? 0) + (counts.invalid_output ?? 0) : null;
                 return (
-                  <td key={m.key} className="px-3 py-3.5 sm:px-5">
+                  <td key={m.key} className="px-3 py-3.5 sm:px-4">
                     {m.key === "rules_only" || failed === null ? "—" : failed}
                   </td>
                 );
               })}
             </tr>
-            <tr className="border-b border-line text-[15px] text-ink-faint">
-              <td className="px-3 py-3.5 sm:px-5 font-sans">Run</td>
+            <tr className="border-b border-line text-[14px] text-ink-faint">
+              <td className="px-3 py-3.5 sm:px-4 font-sans">Run</td>
               {MODES.map((m) => (
-                <td key={m.key} className="px-3 py-3.5 sm:px-5 font-sans">
+                <td key={m.key} className="px-3 py-3.5 sm:px-4 font-sans">
                   <RunMeta run={runs[m.key]} />
                 </td>
               ))}
             </tr>
             {categories.map((category) => (
               <tr key={category} className="border-b border-line last:border-b-0">
-                <td className="px-3 py-3.5 sm:px-5 font-sans text-ink-dim">{category}</td>
+                <td className="px-3 py-3.5 sm:px-4 font-sans text-ink-dim">{category}</td>
                 {MODES.map((m) => (
-                  <td key={m.key} className="px-3 py-3.5 sm:px-5">
+                  <td key={m.key} className="px-3 py-3.5 sm:px-4">
                     {cell(runs[m.key], category)}
                   </td>
                 ))}
@@ -152,13 +152,13 @@ export default function EvaluationPage() {
 
   return (
     <div className="rise-in">
-      <h1 className="text-5xl font-extrabold leading-[1.08] tracking-tight text-ink sm:text-6xl">Evaluation</h1>
-      <p className="mt-5 max-w-3xl text-2xl leading-relaxed text-ink-dim">
+      <h1 className="text-3xl font-extrabold leading-[1.08] tracking-tight text-ink sm:text-4xl">Evaluation</h1>
+      <p className="mt-2 max-w-3xl text-lg leading-relaxed text-ink-dim">
         How well the firewall did on test cases it was measured against, read from the latest recorded runs. Nothing on this page is hard-coded.
       </p>
 
-      {error && <p className="mt-8 text-[18px] text-[color:var(--band-critical)]">Could not load metrics: {error}</p>}
-      {!metrics && !error && <p className="mt-8 text-[18px] text-ink-faint">Loading…</p>}
+      {error && <p className="mt-5 text-[16px] text-[color:var(--band-critical)]">Could not load metrics: {error}</p>}
+      {!metrics && !error && <p className="mt-5 text-[16px] text-ink-faint">Loading…</p>}
 
       {metrics && (
         <>
@@ -173,19 +173,19 @@ export default function EvaluationPage() {
             runs={metrics.latestEval.tuning}
           />
 
-          <section className="mt-10">
-            <h2 className="text-3xl font-extrabold tracking-tight text-ink">Live counters</h2>
-            <p className="mt-2 text-lg text-ink-dim">All inspections recorded by this deployment, including scenario replays.</p>
+          <section className="mt-6">
+            <h2 className="text-2xl font-extrabold tracking-tight text-ink">Live counters</h2>
+            <p className="mt-2 text-base text-ink-dim">All inspections recorded by this deployment, including scenario replays.</p>
             <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-4">
               {(["ALLOW", "SANITIZE", "REVIEW", "BLOCK"] as const).map((action) => (
-                <div key={action} className="rounded-3xl border border-line bg-surface p-5">
-                  <div className="text-[15px] font-bold uppercase tracking-wide text-ink-dim">{action}</div>
-                  <div className="mt-2 font-sans text-5xl font-extrabold leading-none text-ink">{metrics.counters.byAction[action]}</div>
-                  <div className="mt-2 text-lg font-bold text-ink">{ACTION_PLAIN[action]}</div>
+                <div key={action} className="rounded-3xl border border-line bg-surface p-4">
+                  <div className="text-[14px] font-bold uppercase tracking-wide text-ink-dim">{action}</div>
+                  <div className="mt-2 font-sans text-3xl font-extrabold leading-none text-ink">{metrics.counters.byAction[action]}</div>
+                  <div className="mt-2 text-base font-bold text-ink">{ACTION_PLAIN[action]}</div>
                 </div>
               ))}
             </div>
-            <div className="mt-3 font-mono text-[15px] text-ink-dim">total inspections: {metrics.counters.totalInspections}</div>
+            <div className="mt-3 font-mono text-[14px] text-ink-dim">total inspections: {metrics.counters.totalInspections}</div>
           </section>
         </>
       )}

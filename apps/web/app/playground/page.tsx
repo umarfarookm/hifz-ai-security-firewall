@@ -94,11 +94,11 @@ const SOURCE_LABEL: Record<(typeof SOURCES)[number], string> = {
   tool_output: "The output of a tool",
 };
 
-const fieldLabel = "block text-lg font-bold text-ink";
+const fieldLabel = "block text-base font-bold text-ink";
 const fieldControl =
-  "mt-2 h-14 w-full rounded-xl border-2 border-line-strong bg-surface px-4 text-lg text-ink transition-colors focus:border-accent";
+  "mt-2 h-12 w-full rounded-xl border-2 border-line-strong bg-surface px-4 text-base text-ink transition-colors focus:border-accent";
 const chip =
-  "inline-flex min-h-12 items-center rounded-xl border-2 border-line bg-surface px-4 text-[17px] font-semibold text-ink transition-colors hover:border-accent hover:bg-accent-tint";
+  "inline-flex min-h-11 items-center rounded-xl border-2 border-line bg-surface px-4 text-[15px] font-semibold text-ink transition-colors hover:border-accent hover:bg-accent-tint";
 
 export default function PlaygroundPage() {
   const [content, setContent] = useState<string>(EXAMPLES[0].content);
@@ -185,27 +185,27 @@ export default function PlaygroundPage() {
 
   return (
     <div className="rise-in">
-      <h1 className="text-5xl font-extrabold leading-[1.08] tracking-tight text-ink sm:text-6xl">Playground</h1>
-      <p className="mt-5 max-w-3xl text-2xl leading-relaxed text-ink-dim">
+      <h1 className="text-3xl font-extrabold leading-[1.08] tracking-tight text-ink sm:text-4xl">Playground</h1>
+      <p className="mt-2 max-w-3xl text-lg leading-relaxed text-ink-dim">
         Add a message, a document or a picture. We look for hidden commands that try to take over an AI assistant, before it ever reads them.
       </p>
 
-      <div className="mt-10 rounded-[28px] border border-line bg-surface p-6 shadow-[0_12px_40px_rgba(31,26,23,0.07)] sm:p-9">
+      <div className="mt-6 rounded-[28px] border border-line bg-surface p-5 shadow-[0_12px_40px_rgba(31,26,23,0.07)] sm:p-6">
         {attached ? (
-          <div className="rounded-2xl border-2 border-line bg-canvas p-5" data-testid="attached-file">
+          <div className="rounded-2xl border-2 border-line bg-canvas p-4" data-testid="attached-file">
             <div className="flex flex-wrap items-start justify-between gap-x-4 gap-y-1">
-              <div className="min-w-0 grow text-xl text-ink">
+              <div className="min-w-0 grow text-lg text-ink">
                 <span className="block break-all font-bold">{attached.name}</span>
-                <span className="block text-lg text-ink-dim">{Math.max(1, Math.round(attached.size / 1024))} KB</span>
+                <span className="block text-base text-ink-dim">{Math.max(1, Math.round(attached.size / 1024))} KB</span>
               </div>
-              <button type="button" onClick={detach} className="inline-flex min-h-11 items-center rounded-lg px-3 text-lg font-bold text-link hover:underline">
+              <button type="button" onClick={detach} className="inline-flex min-h-11 items-center rounded-lg px-3 text-base font-bold text-link hover:underline">
                 Remove
               </button>
             </div>
             {attached.preview && (
               <img src={attached.preview} alt="The uploaded image" className="mt-4 max-h-48 rounded-lg border border-line" data-testid="image-preview" />
             )}
-            {fileNote && <p className="mt-3 text-lg leading-relaxed text-ink-dim">{fileNote}</p>}
+            {fileNote && <p className="mt-3 text-base leading-relaxed text-ink-dim">{fileNote}</p>}
           </div>
         ) : (
           <>
@@ -218,18 +218,18 @@ export default function PlaygroundPage() {
               onChange={(e) => setContent(e.target.value)}
               rows={6}
               spellCheck={false}
-              className="mt-2 min-h-44 w-full rounded-2xl border-2 border-line-strong bg-surface p-5 text-[22px] leading-relaxed text-ink transition-colors focus:border-accent"
+              className="mt-2 min-h-44 w-full rounded-2xl border-2 border-line-strong bg-surface p-4 text-[18px] leading-relaxed text-ink transition-colors focus:border-accent"
               placeholder="Paste an email, a web page or a message to check…"
             />
             <button
               type="button"
               onClick={() => fileInput.current?.click()}
-              className="mt-4 flex w-full items-center gap-4 rounded-2xl border-2 border-dashed border-line-strong bg-canvas px-6 py-5 text-left transition-colors hover:border-accent"
+              className="mt-4 flex w-full items-center gap-4 rounded-2xl border-2 border-dashed border-line-strong bg-canvas px-6 py-3.5 text-left transition-colors hover:border-accent"
             >
               <svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="shrink-0 text-ink-dim" aria-hidden>
                 <path d="M12 16V4M7 9l5-5 5 5M4 20h16" />
               </svg>
-              <span className="text-xl">
+              <span className="text-lg">
                 <span className="font-bold text-ink">Or add a file or picture.</span>{" "}
                 <span className="text-ink-dim">Word, PDF, PNG or JPEG, up to {MAX_FILE_BYTES / 1024} KB.</span>
               </span>
@@ -248,9 +248,9 @@ export default function PlaygroundPage() {
           }}
         />
 
-        <details className="mt-6 rounded-2xl border border-line px-5 py-4">
-          <summary className="flex min-h-11 cursor-pointer items-center text-lg font-bold text-ink">More options</summary>
-          <div className="mt-4 grid grid-cols-1 gap-5 sm:grid-cols-2">
+        <details className="mt-3 rounded-xl border border-line px-4 py-0.5">
+          <summary className="flex min-h-11 cursor-pointer items-center text-base font-bold text-ink">More options</summary>
+          <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2">
             <label className={fieldLabel}>
               What kind of content is it?
               <select value={contentType} disabled={attached !== null} onChange={(e) => setContentType(e.target.value as ContentType)} className={fieldControl}>
@@ -278,21 +278,21 @@ export default function PlaygroundPage() {
           </div>
         </details>
 
-        <div className="mt-7 flex flex-wrap items-center gap-5">
+        <div className="mt-7 flex flex-wrap items-center gap-4">
           <button
             type="button"
             onClick={runInspection}
             disabled={loading || attaching || (!attached && content.trim().length === 0)}
-            className="inline-flex h-16 items-center rounded-2xl bg-accent px-10 text-2xl font-bold text-ink transition-colors hover:bg-accent-hover disabled:cursor-not-allowed disabled:opacity-40"
+            className="inline-flex h-12 items-center rounded-2xl bg-accent px-7 text-xl font-bold text-ink transition-colors hover:bg-accent-hover disabled:cursor-not-allowed disabled:opacity-40"
           >
             {loading ? "Checking…" : attaching ? "Loading the file…" : "Check it"}
           </button>
-          <span className="text-lg text-ink-dim">Takes a few seconds. We never run what you add.</span>
+          <span className="text-base text-ink-dim">Takes a few seconds. We never run what you add.</span>
         </div>
       </div>
 
-      <div className="mt-9">
-        <div className="text-xl font-bold text-ink">Not sure what to try? Start with an example.</div>
+      <div className="mt-6">
+        <div className="text-lg font-bold text-ink">Not sure what to try? Start with an example.</div>
         <div className="mt-4 flex flex-wrap gap-3">
           {EXAMPLES.map((ex) => (
             <button
@@ -321,10 +321,10 @@ export default function PlaygroundPage() {
         </div>
       </div>
 
-      <div className="mt-12 space-y-10">
+      <div className="mt-8 space-y-6">
         {error && (
-          <div role="alert" className="rounded-2xl border-2 border-[color:var(--band-critical)]/35 bg-[color:var(--band-critical)]/8 p-6 text-lg text-ink">
-            <div className="text-xl font-bold text-[color:var(--band-critical)]">{error.error}</div>
+          <div role="alert" className="rounded-2xl border-2 border-[color:var(--band-critical)]/35 bg-[color:var(--band-critical)]/8 p-5 text-base text-ink">
+            <div className="text-lg font-bold text-[color:var(--band-critical)]">{error.error}</div>
             {error.issues && (
               <ul className="mt-2 list-disc space-y-1 pl-6">
                 {error.issues.map((issue) => (
@@ -337,23 +337,23 @@ export default function PlaygroundPage() {
         )}
 
         {result && (
-          <div className="space-y-10 rise-in">
+          <div className="space-y-6 rise-in">
             <VerdictBanner decision={result.decision} finalBand={result.finalBand} score={result.score} attackTypes={result.attackTypes} eventId={result.eventId} reviewId={result.reviewId} />
 
             {result.extracted && (
-              <section className="rounded-3xl border border-line bg-surface p-6 sm:p-8" data-testid="what-it-read">
-                <h2 className="text-3xl font-extrabold tracking-tight text-ink">What the firewall read{contentType === "image" ? " (by OCR)" : ""}</h2>
-                <pre className="mt-4 max-h-64 overflow-auto whitespace-pre-wrap break-words [overflow-wrap:anywhere] font-sans text-xl leading-relaxed text-ink">
+              <section className="rounded-3xl border border-line bg-surface p-5 sm:p-6" data-testid="what-it-read">
+                <h2 className="text-2xl font-extrabold tracking-tight text-ink">What the firewall read{contentType === "image" ? " (by OCR)" : ""}</h2>
+                <pre className="mt-4 max-h-64 overflow-auto whitespace-pre-wrap break-words [overflow-wrap:anywhere] font-sans text-lg leading-relaxed text-ink">
                   {result.extracted.visibleText ||
                     (contentType === "image"
                       ? "(no readable text found in the image. The firewall can only judge text it can read.)"
                       : "(no visible text)")}
                 </pre>
                 {result.extracted.hiddenText.length > 0 && (
-                  <div className="mt-5 rounded-2xl border-2 border-[color:var(--band-critical)]/30 bg-[color:var(--band-critical)]/6 p-5">
-                    <div className="text-lg font-bold text-[color:var(--band-critical)]">Hidden text a reader would not see</div>
+                  <div className="mt-3 rounded-2xl border-2 border-[color:var(--band-critical)]/30 bg-[color:var(--band-critical)]/6 p-4">
+                    <div className="text-base font-bold text-[color:var(--band-critical)]">Hidden text a reader would not see</div>
                     {result.extracted.hiddenText.map((t, i) => (
-                      <pre key={i} className="mt-2 whitespace-pre-wrap break-words [overflow-wrap:anywhere] font-sans text-xl leading-relaxed text-ink">
+                      <pre key={i} className="mt-2 whitespace-pre-wrap break-words [overflow-wrap:anywhere] font-sans text-lg leading-relaxed text-ink">
                         {t}
                       </pre>
                     ))}
@@ -364,16 +364,16 @@ export default function PlaygroundPage() {
 
             <HowWeChecked result={result} />
 
-            <details className="rounded-3xl border border-line bg-surface px-6 py-5 sm:px-8" data-testid="technical-details">
-              <summary className="flex min-h-11 cursor-pointer items-center text-2xl font-bold text-ink">Technical details</summary>
-              <div className="mt-6 space-y-6">
+            <details className="rounded-3xl border border-line bg-surface px-6 py-3.5 sm:px-6" data-testid="technical-details">
+              <summary className="flex min-h-11 cursor-pointer items-center text-xl font-bold text-ink">Technical details</summary>
+              <div className="mt-4 space-y-6">
                 <ScoreBreakdown score={result.score} band={result.finalBand} contributions={result.contributions} />
                 <div>
-                  <div className="mb-3 text-lg font-bold text-ink">Evidence</div>
+                  <div className="mb-3 text-base font-bold text-ink">Evidence</div>
                   <SignalsList signals={result.signals} />
                 </div>
                 {result.verdict && <VerdictCard verdict={result.verdict} />}
-                <div className="font-mono text-[15px] text-ink-dim">
+                <div className="font-mono text-[14px] text-ink-dim">
                   llmStatus: {result.llmStatus} · detect {result.timings.detect?.toFixed(2)}ms · score {result.timings.score?.toFixed(2)}ms
                   {result.timings.investigate ? ` · investigate ${result.timings.investigate.toFixed(0)}ms` : ""}
                 </div>

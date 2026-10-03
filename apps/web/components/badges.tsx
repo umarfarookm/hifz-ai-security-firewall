@@ -22,7 +22,7 @@ const GUARD_DOT: Record<string, string> = {
 
 function Chip({ dotClassName, children }: { dotClassName: string; children: React.ReactNode }) {
   return (
-    <span className="inline-flex items-center gap-1.5 rounded-xl border border-line px-2 py-1 text-[15px] font-medium uppercase tracking-wide text-ink-dim">
+    <span className="inline-flex items-center gap-1.5 rounded-xl border border-line px-2 py-1 text-[14px] font-medium uppercase tracking-wide text-ink-dim">
       <span className={`h-2.5 w-2.5 shrink-0 rounded-full ${dotClassName}`} />
       {children}
     </span>
