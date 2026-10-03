@@ -41,7 +41,7 @@ Rule: P2 work never starts while any P0/P1 item is open. Tick an item only when 
 | 2.10 | UI: Playground, Agent demo, Event detail | U | Full scenario runnable end-to-end in the browser |
 | 2.11 | First calibration of thresholds on **tuning split only** | S | Changes recorded with before/after metrics |
 
-**3 Oct checkpoint:** D3 go/no-go (default: no-go).
+**3 Oct checkpoint:** D3 go/no-go. **Decided: no-go.** Images are measured separately (47.6% after OCR on 36 images), so the claim stays F3 × D2 (`docs/decision-log.md`, ADR-13).
 **Exit:** all 7 types caught end-to-end in the deployed app; eval runs in both modes.
 
 ---

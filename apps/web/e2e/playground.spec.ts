@@ -47,6 +47,18 @@ test.describe("Playground", () => {
     await expect(page.getByText(/^(BLOCK|REVIEW)$/, { exact: true }).first()).toBeVisible({ timeout: 30_000 });
   });
 
+  test("a planted comment in source code is caught, and Source code is a selectable type", async ({ page }) => {
+    await page.goto("/playground");
+    await page.getByRole("button", { name: "Source code: planted comment" }).click();
+    await page.getByText("More options").click();
+    await expect(page.getByLabel("What kind of content is it?")).toHaveValue("source_code");
+    await page.getByRole("button", { name: "Check it" }).click();
+
+    await expect(page.getByText(/^(BLOCK|REVIEW)$/, { exact: true }).first()).toBeVisible({ timeout: 30_000 });
+    await page.getByText("Technical details").click();
+    await expect(page.getByTestId("technical-details")).toContainText("indirect");
+  });
+
   test("an oversized body is rejected with a 413", async ({ page }) => {
     await page.goto("/playground");
     await page.getByPlaceholder("Paste an email, a web page or a message to check…").fill("a".repeat(101 * 1024));

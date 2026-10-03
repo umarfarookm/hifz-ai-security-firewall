@@ -65,6 +65,7 @@
 | PDF (text layer only) | P1 | Named in the official input list. Max 5 pages; no OCR of scanned pages |
 | Word documents (.docx) | P1 | Visible text plus hidden-layer text (hidden-font runs, near-white and 1 pt text, tracked deletions, comments, footnotes) |
 | Images (PNG, JPEG) | P2 | Text read by offline OCR (tesseract.js), then judged by the same pipeline. Measured on its own small suite, not in the held-out set |
+| OCR text (already extracted by another tool) | P0 | Has no separate path: it is plain text, so it goes through the same pipeline as a typed message. Our own OCR output for images takes the same route after extraction |
 | Audio | Out | No speech-to-text path in any provider we use |
 
 **[DECISION]** Uploads are small by design: every content type is capped at 100 KB of base64 (about 75 KB of file), PDFs at 5 pages and images at 1600 × 1600 px. This keeps latency and DeepSeek cost low, in the demo and in production alike. The investigator sees at most 6,000 characters of any input.
