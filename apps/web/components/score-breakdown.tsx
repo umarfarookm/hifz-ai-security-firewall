@@ -29,24 +29,24 @@ export function ScoreBreakdown({ score, band, contributions }: { score: number; 
   const maxPoints = Math.max(1, ...contributions.map((c) => Math.abs(c.points)));
 
   return (
-    <div className="rounded-3xl border border-line bg-surface p-6 sm:p-7">
+    <div className="rounded-3xl border border-line bg-surface p-5 sm:p-5">
       <div className="flex items-center justify-between gap-4">
         <div>
-          <div className="font-mono text-5xl font-medium tabular-nums text-ink">{score}</div>
-          <div className="mt-1 text-[16px] font-bold text-ink-dim">risk score out of 100</div>
+          <div className="font-mono text-3xl font-medium tabular-nums text-ink">{score}</div>
+          <div className="mt-1 text-[15px] font-bold text-ink-dim">risk score out of 100</div>
         </div>
         <BandBadge band={band} />
       </div>
 
-      <div className="mt-5 h-3 w-full overflow-hidden rounded-full bg-line" role="img" aria-label={`Risk score ${score} out of 100`}>
+      <div className="mt-3 h-3 w-full overflow-hidden rounded-full bg-line" role="img" aria-label={`Risk score ${score} out of 100`}>
         <div className={`h-full rounded-full ${BAND_BAR_COLOR[band]}`} style={{ width: `${Math.min(100, score)}%` }} />
       </div>
 
       {contributions.length > 0 && (
-        <div className="mt-6 space-y-3.5 border-t border-line pt-5">
-          <div className="text-lg font-bold text-ink">Score breakdown</div>
+        <div className="mt-4 space-y-3.5 border-t border-line pt-5">
+          <div className="text-base font-bold text-ink">Score breakdown</div>
           {contributions.map((c) => (
-            <div key={c.factor} className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-4 gap-y-1.5 text-[17px] sm:grid-cols-[240px_minmax(0,1fr)_auto]" title={c.factor}>
+            <div key={c.factor} className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-4 gap-y-1.5 text-[15px] sm:grid-cols-[240px_minmax(0,1fr)_auto]" title={c.factor}>
               <div className="text-ink">{plainFactor(c.factor)}</div>
               <div className="order-last col-span-2 h-2.5 overflow-hidden rounded-full bg-line sm:order-none sm:col-span-1">
                 <div className="h-full rounded-full bg-accent" style={{ width: `${(Math.abs(c.points) / maxPoints) * 100}%` }} />

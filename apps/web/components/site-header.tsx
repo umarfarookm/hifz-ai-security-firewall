@@ -60,14 +60,14 @@ export function SiteHeader() {
 
   return (
     <header className="border-b border-line bg-surface">
-      <div className="mx-auto flex max-w-[1184px] items-center justify-between gap-4 px-5 py-4 sm:px-8 lg:py-5">
+      <div className="mx-auto flex max-w-[1184px] items-center justify-between gap-4 px-4 py-2.5 sm:px-8 lg:py-3">
         <Link href="/" aria-label="HIFZ Firewall, home" className="inline-flex min-h-11 items-center rounded-lg focus-visible:outline-3 focus-visible:outline-offset-4 focus-visible:outline-ink">
           <BrandLockup />
         </Link>
         <div className="flex items-center gap-3">
           <Link
             href="/playground"
-            className="hidden h-13 items-center rounded-xl bg-accent px-6 text-lg font-bold text-ink transition-colors hover:bg-accent-hover focus-visible:outline-3 focus-visible:outline-offset-3 focus-visible:outline-ink sm:inline-flex"
+            className="hidden h-10 items-center rounded-xl bg-accent px-5 text-base font-bold text-ink transition-colors hover:bg-accent-hover focus-visible:outline-3 focus-visible:outline-offset-3 focus-visible:outline-ink sm:inline-flex"
           >
             Check something
           </Link>
@@ -77,7 +77,7 @@ export function SiteHeader() {
             aria-expanded={open}
             aria-controls="mobile-menu"
             onClick={() => setOpen((v) => !v)}
-            className="flex h-13 w-13 items-center justify-center rounded-xl border-2 border-line text-ink lg:hidden"
+            className="flex h-11 w-11 items-center justify-center rounded-xl border-2 border-line text-ink lg:hidden"
           >
             <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" aria-hidden>
               {open ? <path d="M5 5l14 14M19 5L5 19" /> : <path d="M4 7h16M4 12h16M4 17h16" />}
@@ -95,15 +95,15 @@ export function SiteHeader() {
                 key={item.href}
                 href={item.href}
                 aria-current={active ? "page" : undefined}
-                className={`flex flex-col gap-1.5 border-b-4 px-4 pb-3.5 pt-4 transition-colors ${
+                className={`flex flex-col gap-1 border-b-4 px-3 pb-2 pt-2.5 transition-colors ${
                   active ? "border-accent bg-accent-tint" : "border-transparent hover:bg-accent-tint/60"
                 }`}
               >
-                <span className={`flex items-center gap-2.5 ${active ? "text-accent" : "text-ink-dim"}`}>
-                  <MenuIcon className="shrink-0">{item.icon}</MenuIcon>
-                  <span className="text-[19px] font-bold leading-tight text-ink">{item.label}</span>
+                <span className={`flex items-center gap-2 ${active ? "text-accent" : "text-ink-dim"}`}>
+                  <MenuIcon className="h-5 w-5 shrink-0">{item.icon}</MenuIcon>
+                  <span className="text-[15px] font-bold leading-tight text-ink">{item.label}</span>
                 </span>
-                <span className="line-clamp-2 h-10 text-[15px] leading-[1.35] text-ink-dim">{item.caption}</span>
+                <span className="line-clamp-2 h-9 text-[13px] leading-[1.3] text-ink-dim">{item.caption}</span>
               </Link>
             );
           })}
@@ -119,18 +119,18 @@ export function SiteHeader() {
                 key={item.href}
                 href={item.href}
                 aria-current={active ? "page" : undefined}
-                className={`flex min-h-[72px] items-start gap-4 border-b border-line px-5 py-4 ${active ? "bg-accent-tint" : "bg-surface"}`}
+                className={`flex min-h-[56px] items-start gap-3 border-b border-line px-4 py-3 ${active ? "bg-accent-tint" : "bg-surface"}`}
               >
                 <MenuIcon className={`mt-0.5 shrink-0 ${active ? "text-accent" : "text-ink-dim"}`}>{item.icon}</MenuIcon>
                 <span>
-                  <span className="block text-[22px] font-bold leading-tight text-ink">{item.label}</span>
-                  <span className="mt-0.5 block text-[17px] leading-snug text-ink-dim">{item.caption}</span>
+                  <span className="block text-[17px] font-bold leading-tight text-ink">{item.label}</span>
+                  <span className="mt-0.5 block text-[14px] leading-snug text-ink-dim">{item.caption}</span>
                 </span>
               </Link>
             );
           })}
-          <div className="px-5 py-6">
-            <Link href="/playground" className="flex h-16 items-center justify-center rounded-2xl bg-accent text-xl font-bold text-ink">
+          <div className="px-4 py-4">
+            <Link href="/playground" className="flex h-12 items-center justify-center rounded-xl bg-accent text-base font-bold text-ink">
               Check something
             </Link>
           </div>

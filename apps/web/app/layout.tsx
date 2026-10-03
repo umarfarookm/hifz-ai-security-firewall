@@ -17,7 +17,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
     <html lang="en" className={`${figtree.variable} ${mono.variable}`}>
       <body className="min-h-screen bg-canvas font-sans text-ink antialiased">
         <SiteHeader />
-        <main className="mx-auto max-w-[1184px] px-5 py-12 sm:px-8 sm:py-16">{children}</main>
+        <main className="mx-auto max-w-[1184px] px-4 py-5 sm:px-8 sm:py-7">{children}</main>
       </body>
     </html>
   );
