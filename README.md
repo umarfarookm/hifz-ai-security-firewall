@@ -329,7 +329,5 @@ Notifications and reviewer assignment for the queue; a shared-store rate limiter
 
 ## Team
 
-Provility Software Solutions Pvt. Ltd.
-
-- Umar Farook M, Senior Technical Lead (team lead) — [GitHub](https://github.com/umarfarookm), [LinkedIn](https://www.linkedin.com/in/umarfarookm/)
-- J Rasool Sheerin Sidhara, Senior Software Engineer, Backend — [GitHub](https://github.com/sheerin92), [LinkedIn](https://www.linkedin.com/in/sheerin-sidhara/)
+- Umar Farook M, Team lead, Senior Technical Lead (Full-Stack) — [GitHub](https://github.com/umarfarookm), [LinkedIn](https://www.linkedin.com/in/umarfarookm/)
+- J Rasool Sheerin Sidhara, Team mate, Senior Software Engineer (Backend) — [GitHub](https://github.com/sheerin92), [LinkedIn](https://www.linkedin.com/in/sheerin-sidhara/)
