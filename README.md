@@ -12,7 +12,7 @@ Built for the ET AI Hackathon: Agentic Edition (Accenture), Problem 2 — *Agent
 | [`/scenarios`](https://hifz-ai-security-firewall.vercel.app/scenarios) → **Run all 7** | One scripted attack per attack type, each run live through the pipeline |
 | [`/playground`](https://hifz-ai-security-firewall.vercel.app/playground) | Paste any content; get the decision, score breakdown and highlighted evidence |
 | [`/agent`](https://hifz-ai-security-firewall.vercel.app/agent) | A protected email assistant. Every tool call it proposes passes through the Action Guard |
-| [`/reviews`](https://hifz-ai-security-firewall.vercel.app/reviews) | The review queue: content flagged for REVIEW and tool calls the guard held. Anyone can read it; approving or rejecting needs a reviewer login (provided with the submission) |
+| [`/reviews`](https://hifz-ai-security-firewall.vercel.app/reviews) | The review queue: content flagged for REVIEW and tool calls the guard held. Anyone can read it. Approving or rejecting needs a reviewer login, so that step is shown in the demo video; a judge login can be provided on request |
 | [`/evaluation`](https://hifz-ai-security-firewall.vercel.app/evaluation) | Detection and false-positive rates from the dataset runner, read from recorded runs |
 
 The agent's tools are simulated and its credentials are synthetic. Nothing here touches a real mailbox or a real secret.
