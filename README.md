@@ -156,6 +156,22 @@ curl -s -X POST https://hifz-ai-security-firewall.vercel.app/api/v1/inspect \
 
 The response includes `decision`, `finalBand`, `score`, `attackTypes`, `reason`, `signals` (with evidence spans), `contributions` (the score breakdown), `llmStatus` and, when the investigator ran, its `verdict`. Contracts and error codes: [`docs/architecture/LLD.md`](docs/architecture/LLD.md) §4.
 
+## Technology and dependencies
+
+| Layer | What we use | Notes |
+|---|---|---|
+| Language and tooling | TypeScript 5, Node.js 20 or later, pnpm 9 workspaces | One monorepo: `apps/web` and four packages |
+| Web app | Next.js 15, React 18, Tailwind CSS 4 | UI pages and the `/api/v1` route handlers |
+| Database | Supabase Postgres (`@supabase/supabase-js` 2) | Audit log, review queue and evaluation runs; schema in `supabase/migrations` |
+| Detection | Plain TypeScript rule detectors, `zod` 3 for schemas | No model and no network calls in `firewall-core` |
+| Documents and images | `pdfjs-dist` 3 (PDF), `fflate` 0.8 (Word .docx), `tesseract.js` 7 (offline OCR) | OCR is code, not a model call |
+| Second-opinion AI (optional) | A provider-neutral gateway: DeepSeek on the live site, Gemini, Anthropic, OpenAI, Ollama (local only). SDKs: `openai` 4, `@google/generative-ai` 0.21, `@anthropic-ai/sdk` 0.30 | Without a key the firewall runs rules-only |
+| Tests and quality | Vitest 2, Playwright 1.63 (browser tests), ESLint 9 | `pnpm test`, `pnpm lint`, `pnpm typecheck` |
+
+The exact versions are in each `package.json` and `pnpm-lock.yaml`. Datasets and their licences are in [`datasets/ATTRIBUTION.md`](datasets/ATTRIBUTION.md).
+
+**To judge the project without installing anything,** use the live demo above: the Playground, Scenarios and Agent demo need no login.
+
 ## Getting started
 
 ### Prerequisites
@@ -238,6 +254,8 @@ pnpm eval --mode rules_only --split tuning --skip-db
 pnpm --filter @hifz/eval run calibrate       # threshold sensitivity on the tuning split
 ```
 
+`pnpm test`, `pnpm lint`, `pnpm typecheck` and `pnpm build` need no environment file. `pnpm eval` reads `.env.local` even with `--skip-db`, so complete step 3 first; for a rules-only run the three Supabase values can be placeholders. Verified on a fresh clone: install, 667 tests, lint, typecheck, build and the tuning evaluation (96.4% detection, 0.0% false positives) all pass.
+
 Evaluation writes a JSON report to `eval-reports/` (git-ignored) and, unless `--skip-db` is set, a row to `eval_runs`/`eval_results`. Use the held-out split sparingly: it is for reporting, never for tuning. `rules_llm` makes real model calls; on a free-tier key it paces requests (`--llm-min-interval-ms`).
 
 ### Troubleshooting
@@ -311,5 +329,5 @@ Notifications and reviewer assignment for the queue; a shared-store rate limiter
 
 ## Team
 
-- Umar Farook M — [GitHub](https://github.com/umarfarookm)
-- J Rasool Sheerin Sidhara — [GitHub](https://github.com/sheerin92)
+- Umar Farook M, Team lead, Senior Technical Lead (Full-Stack) — [GitHub](https://github.com/umarfarookm), [LinkedIn](https://www.linkedin.com/in/umarfarookm/)
+- J Rasool Sheerin Sidhara, Team mate, Senior Software Engineer (Backend) — [GitHub](https://github.com/sheerin92), [LinkedIn](https://www.linkedin.com/in/sheerin-sidhara/)
