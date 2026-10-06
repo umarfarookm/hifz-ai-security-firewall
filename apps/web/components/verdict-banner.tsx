@@ -6,7 +6,7 @@ import { ATTACK_PLAIN } from "./plain-labels.js";
 type Decision = InspectResponseBody["decision"];
 
 /** Plain-English wording for a decision. The technical label (ALLOW, BLOCK ...) is still shown beside it. */
-const COPY: Record<Decision, { title: string; body: string; tone: string; icon: React.ReactNode }> = {
+export const COPY: Record<Decision, { title: string; body: string; tone: string; icon: React.ReactNode }> = {
   ALLOW: {
     title: "This looks safe.",
     body: "We found nothing in it that tries to give your AI orders.",
@@ -53,7 +53,7 @@ const COPY: Record<Decision, { title: string; body: string; tone: string; icon: 
   },
 };
 
-const BAND_WORD = { LOW: "Low", MEDIUM: "Medium", HIGH: "High", CRITICAL: "Very high" } as const;
+export const BAND_WORD = { LOW: "Low", MEDIUM: "Medium", HIGH: "High", CRITICAL: "Very high" } as const;
 
 export interface VerdictBannerProps {
   decision: Decision;

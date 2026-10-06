@@ -106,6 +106,61 @@ test.describe("Playground", () => {
     await expect(page.getByPlaceholder("Paste an email, a web page or a message to check…")).toHaveValue(/Q3 budget spreadsheet/);
   });
 
+  test.describe("result panel beside the input", () => {
+    test("starts empty, then shows a short answer in view without scrolling, and the link jumps to the full result", async ({ page }) => {
+      await page.setViewportSize({ width: 1440, height: 900 });
+      await page.goto("/playground");
+      const panel = page.getByTestId("result-panel");
+      await expect(page.getByTestId("result-panel-idle")).toBeVisible();
+      await expect(panel).toBeInViewport();
+
+      await page.getByRole("button", { name: "Legitimate message" }).click();
+      await page.getByRole("button", { name: "Check it" }).click();
+      await expect(page.getByTestId("result-panel-done")).toBeVisible({ timeout: 30_000 });
+      await expect(page.getByTestId("result-panel-done")).toContainText("Safe");
+      await expect(panel).toBeInViewport();
+
+      await page.getByRole("button", { name: "See the full result" }).click();
+      await expect(page.getByRole("region", { name: "Result" })).toBeInViewport();
+    });
+
+    test("shows a working state while the check runs", async ({ page }) => {
+      await page.route("**/api/v1/inspect", async (route) => {
+        await new Promise((r) => setTimeout(r, 1200));
+        await route.continue();
+      });
+      await page.goto("/playground");
+      await page.getByRole("button", { name: "Legitimate message" }).click();
+      await page.getByRole("button", { name: "Check it" }).click();
+      await expect(page.getByTestId("result-panel-loading")).toBeVisible();
+      await expect(page.getByTestId("result-panel-done")).toBeVisible({ timeout: 30_000 });
+    });
+
+    test("shows a held item in plain words", async ({ page }) => {
+      await page.goto("/playground");
+      await page.getByRole("button", { name: "Instruction override" }).click();
+      await page.getByRole("button", { name: "Check it" }).click();
+      await expect(page.getByTestId("result-panel-done")).toContainText(/Blocked|Held for a person/, { timeout: 30_000 });
+    });
+
+    test("shows a clear message when the check cannot run", async ({ page }) => {
+      await page.goto("/playground");
+      await page.getByPlaceholder("Paste an email, a web page or a message to check…").fill("a".repeat(101 * 1024));
+      await page.getByRole("button", { name: "Check it" }).click();
+      await expect(page.getByTestId("result-panel-error")).toBeVisible({ timeout: 30_000 });
+      await expect(page.getByTestId("result-panel-idle")).toHaveCount(0);
+    });
+
+    test("on a phone the panel sits above the examples", async ({ page }) => {
+      await page.setViewportSize({ width: 390, height: 844 });
+      await page.goto("/playground");
+      const panel = await page.getByTestId("result-panel").boundingBox();
+      const examples = await page.getByText("Not sure what to try?").boundingBox();
+      expect(panel!.y).toBeLessThan(examples!.y);
+      expect(panel!.width).toBeLessThanOrEqual(390);
+    });
+  });
+
   test("an oversized body is rejected with a 413", async ({ page }) => {
     await page.goto("/playground");
     await page.getByPlaceholder("Paste an email, a web page or a message to check…").fill("a".repeat(101 * 1024));
