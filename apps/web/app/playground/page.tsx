@@ -3,6 +3,7 @@
 import { useRef, useState } from "react";
 import type { InspectResponseBody } from "../../lib/inspect.js";
 import { HowWeChecked } from "../../components/how-we-checked.js";
+import { ResultPanel } from "../../components/result-panel.js";
 import { VerdictBanner } from "../../components/verdict-banner.js";
 import { ScoreBreakdown } from "../../components/score-breakdown.js";
 import { SignalsList } from "../../components/signals-list.js";
@@ -223,7 +224,8 @@ export default function PlaygroundPage() {
         Add a message, a document or a picture. We look for hidden commands that try to take over an AI assistant, before it ever reads them.
       </p>
 
-      <div className="mt-6 rounded-[28px] border border-line bg-surface p-5 shadow-[0_12px_40px_rgba(31,26,23,0.07)] sm:p-6">
+      <div className="mt-6 grid gap-6 lg:grid-cols-[minmax(0,1.7fr)_minmax(0,1fr)] lg:items-start">
+      <div className="min-w-0 rounded-[28px] border border-line bg-surface p-5 shadow-[0_12px_40px_rgba(31,26,23,0.07)] sm:p-6">
         {attached ? (
           <div className="rounded-2xl border-2 border-line bg-canvas p-4" data-testid="attached-file">
             <div className="flex flex-wrap items-start justify-between gap-x-4 gap-y-1">
@@ -326,6 +328,8 @@ export default function PlaygroundPage() {
           <span className="text-base text-ink-dim">Takes a few seconds. We never run what you add.</span>
         </div>
       </div>
+      <ResultPanel loading={loading} hasError={error !== null} result={result} targetId="full-result" />
+      </div>
 
       <div className="mt-6">
         <div className="text-lg font-bold text-ink">Not sure what to try? Start with an example.</div>
@@ -373,7 +377,7 @@ export default function PlaygroundPage() {
         )}
 
         {result && (
-          <div className="space-y-6 rise-in">
+          <div id="full-result" className="scroll-mt-4 space-y-6 rise-in">
             <VerdictBanner decision={result.decision} finalBand={result.finalBand} score={result.score} attackTypes={result.attackTypes} eventId={result.eventId} reviewId={result.reviewId} />
 
             {result.extracted && (
