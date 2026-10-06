@@ -106,7 +106,9 @@ const fieldLabel = "block text-base font-bold text-ink";
 const fieldControl =
   "mt-2 h-12 w-full rounded-xl border-2 border-line-strong bg-surface px-4 text-base text-ink transition-colors focus:border-accent";
 const chip =
-  "inline-flex min-h-11 items-center rounded-xl border-2 border-line bg-surface px-4 text-[15px] font-semibold text-ink transition-colors hover:border-accent hover:bg-accent-tint";
+  "inline-flex min-h-11 items-center gap-2 rounded-xl border-2 px-4 text-[15px] font-semibold text-ink transition-colors hover:border-accent hover:bg-accent-tint";
+const chipIdle = "border-line bg-surface";
+const chipSelected = "border-accent bg-accent-tint";
 
 export default function PlaygroundPage() {
   const [content, setContent] = useState<string>(EXAMPLES[0].content);
@@ -121,35 +123,44 @@ export default function PlaygroundPage() {
   /** True while a file is being read or a sample is being fetched, so "Check it" cannot run on the wrong content. */
   const [attaching, setAttaching] = useState(false);
   const fileInput = useRef<HTMLInputElement>(null);
+  /** The example chip the current content came from; null once the person edits the text or adds their own file. */
+  const [selected, setSelected] = useState<string | null>(EXAMPLES[0].label);
+  /** Counts example choices so a slow sample download cannot overwrite a newer choice. */
+  const pick = useRef(0);
 
   async function attach(file: File | Blob, name: string, note: string | null = null) {
     setAttaching(true);
+    pick.current += 1;
     try {
-      await attachFile(file, name, note);
+      if (await attachFile(file, name, note)) setSelected(null);
     } finally {
       setAttaching(false);
     }
   }
 
   async function loadSample(file: string, note: string) {
+    const mine = ++pick.current;
     setAttaching(true);
     try {
       const res = await fetch(`/samples/${file}`);
-      await attachFile(await res.blob(), file, note);
+      const blob = await res.blob();
+      if (mine !== pick.current) return;
+      if (await attachFile(blob, file, note)) setSelected(file);
     } finally {
       setAttaching(false);
     }
   }
 
-  async function attachFile(file: File | Blob, name: string, note: string | null) {
+  /** Returns true when the file was attached. */
+  async function attachFile(file: File | Blob, name: string, note: string | null): Promise<boolean> {
     const type = fileContentType(name);
     if (!type) {
       setError({ error: "unsupported file", message: "Upload a .pdf, .docx, .png or .jpg file." });
-      return;
+      return false;
     }
     if (file.size > MAX_FILE_BYTES) {
       setError({ error: "file too large", message: `The demo accepts files up to ${MAX_FILE_BYTES / 1024} KB (this one is ${Math.ceil(file.size / 1024)} KB).` });
-      return;
+      return false;
     }
     setError(null);
     setResult(null);
@@ -159,13 +170,27 @@ export default function PlaygroundPage() {
     setFileNote(note);
     setContentType(type);
     setSource("document");
+    return true;
   }
 
   function detach() {
     setAttached(null);
     setFileNote(null);
     setContentType("text");
+    setSelected(null);
     if (fileInput.current) fileInput.current.value = "";
+  }
+
+  /** A text example replaces everything: any attached file, the previous result and any error. */
+  function chooseExample(ex: (typeof EXAMPLES)[number]) {
+    pick.current += 1;
+    detach();
+    setContent(ex.content);
+    setContentType(ex.contentType);
+    setSource(ex.source);
+    setResult(null);
+    setError(null);
+    setSelected(ex.label);
   }
 
   async function runInspection() {
@@ -223,7 +248,10 @@ export default function PlaygroundPage() {
             <textarea
               id="check-text"
               value={content}
-              onChange={(e) => setContent(e.target.value)}
+              onChange={(e) => {
+                setContent(e.target.value);
+                setSelected(null);
+              }}
               rows={6}
               spellCheck={false}
               className="mt-2 min-h-44 w-full rounded-2xl border-2 border-line-strong bg-surface p-4 text-[18px] leading-relaxed text-ink transition-colors focus:border-accent"
@@ -306,13 +334,11 @@ export default function PlaygroundPage() {
             <button
               key={ex.label}
               type="button"
-              onClick={() => {
-                setContent(ex.content);
-                setContentType(ex.contentType);
-                setSource(ex.source);
-              }}
-              className={chip}
+              aria-pressed={selected === ex.label}
+              onClick={() => chooseExample(ex)}
+              className={`${chip} ${selected === ex.label ? chipSelected : chipIdle}`}
             >
+              {selected === ex.label && <span aria-hidden>✓</span>}
               {ex.label}
             </button>
           ))}
@@ -320,9 +346,11 @@ export default function PlaygroundPage() {
             <button
               key={sample.file}
               type="button"
+              aria-pressed={selected === sample.file}
               onClick={() => void loadSample(sample.file, sample.note)}
-              className={chip}
+              className={`${chip} ${selected === sample.file ? chipSelected : chipIdle}`}
             >
+              {selected === sample.file && <span aria-hidden>✓</span>}
               {sample.label}
             </button>
           ))}

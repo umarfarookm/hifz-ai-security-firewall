@@ -59,6 +59,53 @@ test.describe("Playground", () => {
     await expect(page.getByTestId("technical-details")).toContainText("indirect");
   });
 
+  test("the chosen example is highlighted, and typing your own text clears the highlight", async ({ page }) => {
+    await page.goto("/playground");
+    const instruction = page.getByRole("button", { name: "Instruction override" });
+    const legit = page.getByRole("button", { name: "Legitimate message" });
+    await expect(instruction).toHaveAttribute("aria-pressed", "true");
+    await legit.click();
+    await expect(legit).toHaveAttribute("aria-pressed", "true");
+    await expect(instruction).toHaveAttribute("aria-pressed", "false");
+    await page.getByPlaceholder("Paste an email, a web page or a message to check…").fill("My own text");
+    await expect(legit).toHaveAttribute("aria-pressed", "false");
+  });
+
+  test("choosing a text example after a file example clears the attachment and checks the text", async ({ page }) => {
+    await page.goto("/playground");
+    const word = page.getByRole("button", { name: "Word: clean memo" });
+    await word.click();
+    await expect(page.getByTestId("attached-file")).toBeVisible();
+    await expect(word).toHaveAttribute("aria-pressed", "true");
+
+    const legit = page.getByRole("button", { name: "Legitimate message" });
+    await legit.click();
+    await expect(page.getByTestId("attached-file")).toHaveCount(0);
+    await expect(word).toHaveAttribute("aria-pressed", "false");
+    await expect(legit).toHaveAttribute("aria-pressed", "true");
+    const box = page.getByPlaceholder("Paste an email, a web page or a message to check…");
+    await expect(box).toHaveValue(/Q3 budget spreadsheet/);
+
+    const [request] = await Promise.all([page.waitForRequest("**/api/v1/inspect"), page.getByRole("button", { name: "Check it" }).click()]);
+    const body = request.postDataJSON() as { content: string; contentType: string; source: string };
+    expect(body.contentType).toBe("text");
+    expect(body.source).toBe("user_message");
+    expect(body.content).toMatch(/Q3 budget spreadsheet/);
+  });
+
+  test("a slow file example cannot overwrite a text example chosen after it", async ({ page }) => {
+    await page.route("**/samples/hidden-instruction.docx", async (route) => {
+      await new Promise((r) => setTimeout(r, 1500));
+      await route.continue();
+    });
+    await page.goto("/playground");
+    await page.getByRole("button", { name: "Word: hidden instruction" }).click();
+    await page.getByRole("button", { name: "Legitimate message" }).click();
+    await page.waitForTimeout(2500);
+    await expect(page.getByTestId("attached-file")).toHaveCount(0);
+    await expect(page.getByPlaceholder("Paste an email, a web page or a message to check…")).toHaveValue(/Q3 budget spreadsheet/);
+  });
+
   test("an oversized body is rejected with a 413", async ({ page }) => {
     await page.goto("/playground");
     await page.getByPlaceholder("Paste an email, a web page or a message to check…").fill("a".repeat(101 * 1024));
