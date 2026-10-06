@@ -164,7 +164,7 @@ The response includes `decision`, `finalBand`, `score`, `attackTypes`, `reason`,
 | Web app | Next.js 15, React 18, Tailwind CSS 4 | UI pages and the `/api/v1` route handlers |
 | Database | Supabase Postgres (`@supabase/supabase-js` 2) | Audit log, review queue and evaluation runs; schema in `supabase/migrations` |
 | Detection | Plain TypeScript rule detectors, `zod` 3 for schemas | No model and no network calls in `firewall-core` |
-| Documents and images | `pdfjs-dist` 3 (PDF), `fflate` 0.8 (Word .docx), `tesseract.js` 7 (offline OCR) | OCR is code, not a model call |
+| Documents and images | `pdfjs-dist` 3 (PDF), `fflate` 0.8 (Word .docx), `tesseract.js` 7 (offline OCR) | A trained OCR engine (tesseract's LSTM) that runs on our server, cannot be instructed and uses no LLM tokens |
 | Second-opinion AI (optional) | A provider-neutral gateway: DeepSeek on the live site, Gemini, Anthropic, OpenAI, Ollama (local only). SDKs: `openai` 4, `@google/generative-ai` 0.21, `@anthropic-ai/sdk` 0.30 | Without a key the firewall runs rules-only |
 | Tests and quality | Vitest 2, Playwright 1.63 (browser tests), ESLint 9 | `pnpm test`, `pnpm lint`, `pnpm typecheck` |
 

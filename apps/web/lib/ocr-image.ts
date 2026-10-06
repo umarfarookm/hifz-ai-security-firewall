@@ -5,8 +5,8 @@ import { IngestError, type MapIngestAdapter } from "@hifz/firewall-core";
 
 /**
  * image adapter: reads the text in a PNG or JPEG with tesseract.js (WebAssembly, no network, model files bundled in
- * ocr-assets/). OCR is deterministic code, not a model, so a picture that says "ignore previous instructions" cannot
- * talk its way past the extractor, and an image costs no LLM tokens. Lives in apps/web rather than firewall-core
+ * ocr-assets/). OCR is a deterministic trained engine (tesseract LSTM) that cannot be instructed, so a picture that says
+ * "ignore previous instructions" cannot talk its way past the extractor, and an image costs no LLM tokens. Lives in apps/web rather than firewall-core
  * because it needs the bundled model files and a worker; the extracted text then goes through the same pipeline.
  *
  * Demo inputs are small by design: 100 KB of base64 (checked by the caller), at most 1600 x 1600 px, one OCR job at

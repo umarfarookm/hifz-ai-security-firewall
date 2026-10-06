@@ -133,7 +133,7 @@ hifz-ai-security-firewall/
 
 **[VERIFIED]** The pdf adapter gives pdfjs its worker handler directly (`globalThis.pdfjsWorker`) instead of a worker file path. Under webpack, `require.resolve` becomes a numeric module id, and on a Vercel preview pdfjs failed with "Setting up fake worker failed: e.endsWith is not a function" until this was changed.
 
-**[DECISION]** OCR is deterministic code, not a model, so a picture saying "ignore previous instructions" cannot talk its way past the extractor, and an image costs no LLM tokens. The investigator receives `visibleText` only, so hidden-layer text from a docx is caught by the deterministic rules, not by the LLM.
+**[DECISION]** OCR runs on tesseract.js, a trained neural OCR engine (LSTM) that is deterministic and cannot be instructed, unlike a vision LLM, so a picture saying "ignore previous instructions" cannot talk its way past the extractor, and an image costs no LLM tokens. The investigator receives `visibleText` only, so hidden-layer text from a docx is caught by the deterministic rules, not by the LLM.
 
 **Hidden-segment offsets (docx):** they index a single running stream of the adapter's output (visible lines then hidden chunks). Nothing downstream reads hidden-segment offsets, only their excerpts.
 
