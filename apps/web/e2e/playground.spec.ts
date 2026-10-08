@@ -1,5 +1,12 @@
 import { expect, test } from "@playwright/test";
 
+let clientCounter = 0;
+/** The API limits each client address to 10 checks a minute. Giving a test its own address keeps a long run from tripping it. */
+async function ownClientAddress(page: import("@playwright/test").Page) {
+  clientCounter += 1;
+  await page.context().setExtraHTTPHeaders({ "x-forwarded-for": `10.77.${Date.now() % 250}.${clientCounter}` });
+}
+
 test.describe("Playground", () => {
   test("run button is disabled with no content", async ({ page }) => {
     await page.goto("/playground");
@@ -107,6 +114,8 @@ test.describe("Playground", () => {
   });
 
   test.describe("result panel beside the input", () => {
+    test.beforeEach(async ({ page }) => ownClientAddress(page));
+
     test("starts empty, then shows a short answer in view without scrolling, and the link jumps to the full result", async ({ page }) => {
       await page.setViewportSize({ width: 1440, height: 900 });
       await page.goto("/playground");
@@ -158,6 +167,81 @@ test.describe("Playground", () => {
       const examples = await page.getByText("Not sure what to try?").boundingBox();
       expect(panel!.y).toBeLessThan(examples!.y);
       expect(panel!.width).toBeLessThanOrEqual(390);
+    });
+  });
+
+  test.describe("a result never outlives the input it was for", () => {
+    const BOX = "Paste an email, a web page or a message to check…";
+    test.beforeEach(async ({ page }) => ownClientAddress(page));
+
+    async function checkLegit(page: import("@playwright/test").Page) {
+      await page.goto("/playground");
+      await page.getByRole("button", { name: "Legitimate message" }).click();
+      await page.getByRole("button", { name: "Check it" }).click();
+      await expect(page.getByTestId("result-panel-done")).toBeVisible({ timeout: 30_000 });
+      await expect(page.getByRole("region", { name: "Result" })).toBeVisible();
+    }
+
+    test("emptying the text box clears both the short and the full result", async ({ page }) => {
+      await checkLegit(page);
+      await page.getByPlaceholder(BOX).fill("");
+      await expect(page.getByTestId("result-panel-idle")).toBeVisible();
+      await expect(page.getByRole("region", { name: "Result" })).toHaveCount(0);
+      await expect(page.getByRole("button", { name: "Check it" })).toBeDisabled();
+    });
+
+    test("editing the text clears the old result", async ({ page }) => {
+      await checkLegit(page);
+      await page.getByPlaceholder(BOX).press("End");
+      await page.getByPlaceholder(BOX).pressSequentially(" Thanks again.");
+      await expect(page.getByTestId("result-panel-idle")).toBeVisible();
+      await expect(page.getByRole("region", { name: "Result" })).toHaveCount(0);
+      await expect(page.getByRole("button", { name: "Check it" })).toBeEnabled();
+    });
+
+    test("removing an attached file clears the old result", async ({ page }) => {
+      await page.goto("/playground");
+      await page.getByRole("button", { name: "Word: clean memo" }).click();
+      await page.getByRole("button", { name: "Check it" }).click();
+      await expect(page.getByTestId("result-panel-done")).toBeVisible({ timeout: 30_000 });
+      await page.getByRole("button", { name: "Remove" }).click();
+      await expect(page.getByTestId("result-panel-idle")).toBeVisible();
+      await expect(page.getByRole("region", { name: "Result" })).toHaveCount(0);
+    });
+
+    test("changing where the content came from clears the old result", async ({ page }) => {
+      await checkLegit(page);
+      await page.getByText("More options").click();
+      await page.getByLabel("Where did it come from?").selectOption("web_page");
+      await expect(page.getByTestId("result-panel-idle")).toBeVisible();
+      await expect(page.getByRole("region", { name: "Result" })).toHaveCount(0);
+    });
+
+    test("editing an error away clears the error message too", async ({ page }) => {
+      await page.goto("/playground");
+      await page.getByPlaceholder(BOX).fill("a".repeat(101 * 1024));
+      await page.getByRole("button", { name: "Check it" }).click();
+      await expect(page.getByText("content exceeds the 100KB size cap")).toBeVisible({ timeout: 30_000 });
+      await page.getByPlaceholder(BOX).fill("A short message.");
+      await expect(page.getByText("content exceeds the 100KB size cap")).toHaveCount(0);
+      await expect(page.getByTestId("result-panel-idle")).toBeVisible();
+    });
+
+    test("a slow answer for text you have since changed is ignored", async ({ page }) => {
+      await page.route("**/api/v1/inspect", async (route) => {
+        await new Promise((r) => setTimeout(r, 1500));
+        await route.continue();
+      });
+      await page.goto("/playground");
+      await page.getByRole("button", { name: "Legitimate message" }).click();
+      await page.getByRole("button", { name: "Check it" }).click();
+      await expect(page.getByTestId("result-panel-loading")).toBeVisible();
+      await page.getByPlaceholder(BOX).fill("Something else entirely.");
+      await expect(page.getByTestId("result-panel-idle")).toBeVisible();
+      await page.waitForTimeout(2500);
+      await expect(page.getByTestId("result-panel-idle")).toBeVisible();
+      await expect(page.getByRole("region", { name: "Result" })).toHaveCount(0);
+      await expect(page.getByRole("button", { name: "Check it" })).toBeEnabled();
     });
   });
 
