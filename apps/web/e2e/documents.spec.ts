@@ -1,4 +1,4 @@
-import { expect, test } from "@playwright/test";
+import { expect, test } from "./fixtures";
 import path from "node:path";
 
 const sample = (name: string) => path.join(__dirname, "..", "public", "samples", name);

@@ -1,4 +1,4 @@
-import { expect, test } from "@playwright/test";
+import { expect, test } from "./fixtures";
 
 test.describe("Dashboard", () => {
   test("shows live counters, the four risk bands, the latest events and the held-out summary from the API", async ({ page }) => {

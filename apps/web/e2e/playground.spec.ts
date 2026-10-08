@@ -1,11 +1,4 @@
-import { expect, test } from "@playwright/test";
-
-let clientCounter = 0;
-/** The API limits each client address to 10 checks a minute. Giving a test its own address keeps a long run from tripping it. */
-async function ownClientAddress(page: import("@playwright/test").Page) {
-  clientCounter += 1;
-  await page.context().setExtraHTTPHeaders({ "x-forwarded-for": `10.77.${Date.now() % 250}.${clientCounter}` });
-}
+import { expect, test } from "./fixtures";
 
 test.describe("Playground", () => {
   test("run button is disabled with no content", async ({ page }) => {
@@ -114,8 +107,6 @@ test.describe("Playground", () => {
   });
 
   test.describe("result panel beside the input", () => {
-    test.beforeEach(async ({ page }) => ownClientAddress(page));
-
     test("starts empty, then shows a short answer in view without scrolling, and the link jumps to the full result", async ({ page }) => {
       await page.setViewportSize({ width: 1440, height: 900 });
       await page.goto("/playground");
@@ -172,8 +163,6 @@ test.describe("Playground", () => {
 
   test.describe("a result never outlives the input it was for", () => {
     const BOX = "Paste an email, a web page or a message to check…";
-    test.beforeEach(async ({ page }) => ownClientAddress(page));
-
     async function checkLegit(page: import("@playwright/test").Page) {
       await page.goto("/playground");
       await page.getByRole("button", { name: "Legitimate message" }).click();
