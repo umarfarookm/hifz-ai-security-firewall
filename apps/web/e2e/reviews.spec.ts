@@ -1,4 +1,4 @@
-import { expect, test } from "@playwright/test";
+import { expect, test } from "./fixtures";
 
 test.describe("Review queue", () => {
   test("is readable without signing in, offers reviewer sign-in, and filters by state", async ({ page }) => {

@@ -1,4 +1,4 @@
-import { expect, test } from "@playwright/test";
+import { expect, test } from "./fixtures";
 
 // Regression: a long unbroken string (e.g. pasted base64) used to stretch the Event detail page far past the viewport.
 test("a long unbroken input does not make the event page scroll sideways", async ({ page, request }) => {

@@ -1,4 +1,4 @@
-import { expect, test } from "@playwright/test";
+import { expect, test } from "./fixtures";
 
 test.describe("Agent demo", () => {
   // Only one test in this file calls POST /agent/run — it's rate-limited to

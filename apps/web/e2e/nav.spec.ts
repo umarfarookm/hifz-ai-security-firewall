@@ -1,4 +1,4 @@
-import { expect, test } from "@playwright/test";
+import { expect, test } from "./fixtures";
 
 test.describe("navigation", () => {
   test("home links to the Playground and Agent demo screens", async ({ page }) => {

@@ -1,4 +1,4 @@
-import { expect, test } from "@playwright/test";
+import { expect, test } from "./fixtures";
 
 test.describe("Scenarios", () => {
   test("lists all seven scenarios and replays one through the live pipeline", async ({ page }) => {

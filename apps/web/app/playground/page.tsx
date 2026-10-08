@@ -128,6 +128,16 @@ export default function PlaygroundPage() {
   const [selected, setSelected] = useState<string | null>(EXAMPLES[0].label);
   /** Counts example choices so a slow sample download cannot overwrite a newer choice. */
   const pick = useRef(0);
+  /** Counts checks and input changes, so a result that arrives after the input changed is ignored. */
+  const run = useRef(0);
+
+  /** The previous answer describes the previous input, so any change to the input removes it. */
+  function clearOutcome() {
+    run.current += 1;
+    setLoading(false);
+    setResult(null);
+    setError(null);
+  }
 
   async function attach(file: File | Blob, name: string, note: string | null = null) {
     setAttaching(true);
@@ -163,8 +173,7 @@ export default function PlaygroundPage() {
       setError({ error: "file too large", message: `The demo accepts files up to ${MAX_FILE_BYTES / 1024} KB (this one is ${Math.ceil(file.size / 1024)} KB).` });
       return false;
     }
-    setError(null);
-    setResult(null);
+    clearOutcome();
     const base64 = await toBase64(file);
     const preview = type === "image" ? `data:${/\.png$/i.test(name) ? "image/png" : "image/jpeg"};base64,${base64}` : null;
     setAttached({ name, size: file.size, base64, preview });
@@ -175,6 +184,7 @@ export default function PlaygroundPage() {
   }
 
   function detach() {
+    clearOutcome();
     setAttached(null);
     setFileNote(null);
     setContentType("text");
@@ -189,12 +199,12 @@ export default function PlaygroundPage() {
     setContent(ex.content);
     setContentType(ex.contentType);
     setSource(ex.source);
-    setResult(null);
-    setError(null);
+    clearOutcome();
     setSelected(ex.label);
   }
 
   async function runInspection() {
+    const mine = ++run.current;
     setLoading(true);
     setError(null);
     setResult(null);
@@ -205,15 +215,17 @@ export default function PlaygroundPage() {
         body: JSON.stringify({ content: attached ? attached.base64 : content, contentType, source, ...(origin ? { origin } : {}) }),
       });
       const json = await res.json();
+      if (mine !== run.current) return;
       if (!res.ok) {
         setError(json as ApiError);
         return;
       }
       setResult(json as InspectResponseBody);
     } catch (err) {
+      if (mine !== run.current) return;
       setError({ error: "network error", message: err instanceof Error ? err.message : String(err) });
     } finally {
-      setLoading(false);
+      if (mine === run.current) setLoading(false);
     }
   }
 
@@ -253,6 +265,7 @@ export default function PlaygroundPage() {
               onChange={(e) => {
                 setContent(e.target.value);
                 setSelected(null);
+                clearOutcome();
               }}
               rows={6}
               spellCheck={false}
@@ -291,7 +304,10 @@ export default function PlaygroundPage() {
           <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2">
             <label className={fieldLabel}>
               What kind of content is it?
-              <select value={contentType} disabled={attached !== null} onChange={(e) => setContentType(e.target.value as ContentType)} className={fieldControl}>
+              <select value={contentType} disabled={attached !== null} onChange={(e) => {
+                setContentType(e.target.value as ContentType);
+                clearOutcome();
+              }} className={fieldControl}>
                 {CONTENT_TYPES.map((t) => (
                   <option key={t} value={t}>
                     {CONTENT_LABEL[t]}
@@ -301,7 +317,10 @@ export default function PlaygroundPage() {
             </label>
             <label className={fieldLabel}>
               Where did it come from?
-              <select value={source} onChange={(e) => setSource(e.target.value as (typeof SOURCES)[number])} className={fieldControl}>
+              <select value={source} onChange={(e) => {
+                setSource(e.target.value as (typeof SOURCES)[number]);
+                clearOutcome();
+              }} className={fieldControl}>
                 {SOURCES.map((s) => (
                   <option key={s} value={s}>
                     {SOURCE_LABEL[s]}
@@ -311,7 +330,10 @@ export default function PlaygroundPage() {
             </label>
             <label className={`${fieldLabel} sm:col-span-2`}>
               A web address or domain, if you have one (optional)
-              <input value={origin} onChange={(e) => setOrigin(e.target.value)} className={fieldControl} placeholder="e.g. https://example.com" />
+              <input value={origin} onChange={(e) => {
+                setOrigin(e.target.value);
+                clearOutcome();
+              }} className={fieldControl} placeholder="e.g. https://example.com" />
             </label>
           </div>
         </details>
